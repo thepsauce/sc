@@ -1,3 +1,6 @@
+#ifndef SC_H
+#define SC_H
+
 #include <stdio.h>
 #include <gmp.h>
 #include <mpfr.h>
@@ -154,3 +157,5 @@ int output_expression(const Expression *expr, FILE *fp);
 Expression *input_expression(FILE *fp);
 Expression *simplify_expression(Expression *expr);
 void delete_expression(Expression *expr);
+
+#endif

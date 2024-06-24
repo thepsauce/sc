@@ -30,6 +30,7 @@ static Expression *input_expression_recursive(struct parser *parser, unsigned pr
             c = parser_getc(parser);
             continue;
         }
+
         if (isdigit(c)) {
             if (root != NULL) {
                 break;
