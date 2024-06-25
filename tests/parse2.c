@@ -1,6 +1,9 @@
 #include "parse.h"
 #include "sc.h"
 
+#include <stdio.h>
+#include <string.h>
+
 int main(void)
 {
     char *line = NULL;
@@ -10,22 +13,25 @@ int main(void)
     while ((lenLine = getline(&line, &szLine, stdin)) > 0) {
         line[lenLine - 1] = '\0';
         Parser.s = line;
-        Parser.e = NULL;
-        if (line[0] == 'q') {
+        if (strcmp(line, "quit") == 0) {
             break;
         }
-        if (parse() == 0) {
-            while (Parser.p != Parser.s) {
+        struct group *g = new_group(1);
+        if (parse(g) == 0) {
+            /*while (Parser.p != Parser.s) {
                 Parser.p--;
                 printf(" ");
             }
-            printf("~\n");
-            printf("syntax correct!\n");
+            printf("~\n");*/
+            //printf("syntax correct!\n");
             /*Expression *s = simplify_expression(Parser.e);
             output_expression(s, stdout);
             printf("\n");
             delete_expression(s);
             delete_expression(Parser.e);*/
+            output_group(g, 0);
+            printf("\n");
+            free_group(g);
         }
     }
 

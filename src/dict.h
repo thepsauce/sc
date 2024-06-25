@@ -9,6 +9,7 @@ extern struct dictionary {
 } Dict;
 
 char *dict_put(const char *word);
+char *dict_putl(const char *word, size_t len);
 
 #endif
 
