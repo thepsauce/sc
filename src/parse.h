@@ -97,9 +97,28 @@ struct group *new_group(size_t num);
 struct group *join_group(struct group *parent, struct group *child);
 struct group *join_group_no_free(struct group *parent, struct group *child);
 struct group *surround_group(struct group *group, enum group_type type);
-void clear_group(struct group *g);
-void free_group(struct group *g);
-void output_group(struct group *g, int color);
+void clear_group(struct group *group);
+void free_group(struct group *group);
+void output_group(struct group *group, int color);
+
+enum value_type {
+    VALUE_NUMBER,
+    VALUE_VECTOR,
+    VALUE_MATRIX,
+    VALUE_SET,
+    VALUE_RANGE
+};
+
+struct value {
+    enum value_type t;
+    union {
+        mpf_t f;
+    } v;
+};
+
+void compute_value(const struct group *group, struct value *value);
+void delete_value(struct value *value);
+void output_value(struct value *value);
 
 void throw_error(const char *msg, ...);
 int parse(struct group *group);

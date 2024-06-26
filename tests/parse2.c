@@ -30,7 +30,14 @@ int main(void)
             delete_expression(s);
             delete_expression(Parser.e);*/
             output_group(g, 0);
+            printf(" = ");
+
+            struct value v;
+            compute_value(g, &v);
+            output_value(&v);
             printf("\n");
+            delete_value(&v);
+
             free_group(g);
         }
     }
