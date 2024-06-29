@@ -1,18 +1,46 @@
+#include "parse.h"
 #include "sc.h"
+
+#include <stdio.h>
+#include <string.h>
 
 int main(void)
 {
-    Expression *expr;
+    char *line = NULL;
+    size_t szLine = 0;
+    ssize_t lenLine;
 
-    while (1) {
-        expr = input_expression(stdin);
-        if (expr == NULL) {
-            printf("invalid expression\n");
-            continue;
+    init_parser();
+
+    printf(">>> ");
+    while ((lenLine = getline(&line, &szLine, stdin)) > 0) {
+        line[lenLine - 1] = '\0';
+        if (strcmp(line, "quit") == 0) {
+            break;
         }
-        output_expression(expr, stdout);
-        printf("\n");
-        delete_expression(expr);
+        switch (parse(line)) {
+        case PARSER_ERROR:
+            printf("error\n>>> ");
+            clear_group(Parser.st[0]);
+            reset_parser();
+            break;
+        case PARSER_OK:
+            output_group(Parser.st[0], 0);
+            printf("\n");
+            reset_parser();
+            clear_group(Parser.st[0]);
+            printf(">>> ");
+            break;
+        case PARSER_CONTINUE:
+            if (Parser.st[0]->t == GROUP_NULL) {
+                printf(">>> ");
+                continue;
+            }
+            printf("... ");
+            break;
+        }
     }
+
     return 0;
 }
+

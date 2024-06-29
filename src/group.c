@@ -11,6 +11,7 @@ struct group *new_group(size_t n)
     g = calloc(n, sizeof(*g));
     if (g == NULL) {
         throw_error("%s", strerror(errno));
+        return NULL;
     }
     return g;
 }
@@ -29,22 +30,26 @@ struct group *join_group_no_free(struct group *p, struct group *c)
     g = reallocarray(p->g, p->n + 1, sizeof(*p->g));
     if (g == NULL) {
         throw_error("%s", strerror(errno));
+        return NULL;
     }
     p->g = g;
     g[p->n++] = *c;
     return p;
 }
 
-struct group *surround_group(struct group *c, enum group_type t)
+struct group *surround_group(struct group *c, enum group_type t, size_t n)
 {
     struct group *g;
 
-    g = new_group(1);
+    g = new_group(n);
+    if (g == NULL) {
+        return NULL;
+    }
     g[0] = *c;
     c->t = t;
     c->g = g;
-    c->n = 1;
-    return c;
+    c->n = n;
+    return &g[n - 1];
 }
 
 void clear_group(struct group *g)
@@ -100,10 +105,14 @@ const char *GroupTypeStrings[] = {
     [GROUP_CURLY] = "CURLY",
     [GROUP_DOUBLE_BAR] = "DOUBLE_BAR",
     [GROUP_BAR] = "BAR",
-    [GROUP_CHOOSE_FROM] = "CHOOSE_FROM",
     [GROUP_IMPLICIT] = "IMPLICIT",
     [GROUP_VARIABLE] = "VARIABLE",
     [GROUP_NUMBER] = "NUMBER",
+    [GROUP_ELEMENT_OF] = "ELEMENT_OF",
+    [GROUP_RAISE2] = "RAISE2",
+    [GROUP_RAISE3] = "RAISE3",
+    [GROUP_SQRT] = "SQRT",
+    [GROUP_CBRT] = "CBRT",
 };
 
 void output_group(struct group *g, int color)

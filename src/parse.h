@@ -11,16 +11,18 @@ extern struct parser {
 
     /* read_word (uses n for length) */
     char *w;
-
     /* read_number (overwrites n as well) */
     mpf_t f;
-
-    /* read_operator */
-    int o;
-
     int n;
 
-    jmp_buf jb;
+    /* stack */
+    struct group *st[1024];
+    /* stack pointer */
+    int sp;
+    /* open brackets */
+    int brackets[64];
+    /* open bracket pointer */
+    int bp;
 } Parser;
 
 enum group_type {
@@ -30,6 +32,8 @@ enum group_type {
     GROUP_POSITIVE,
     GROUP_NEGATE,
     GROUP_NOT,
+    GROUP_SQRT,
+    GROUP_CBRT,
 
     /* expr opr expr */
     GROUP_PLUS,
@@ -59,9 +63,13 @@ enum group_type {
     GROUP_DO,
     GROUP_WHERE,
 
+    GROUP_ELEMENT_OF,
+
     /* expr opr */
     GROUP_EXCLAM,
     GROUP_PERCENT,
+    GROUP_RAISE2,
+    GROUP_RAISE3,
     GROUP_ELSE,
 
     /* opr expr opr */
@@ -72,9 +80,6 @@ enum group_type {
     GROUP_CURLY,
     GROUP_DOUBLE_BAR,
     GROUP_BAR,
-
-    /* opr expr opr expr */
-    GROUP_CHOOSE_FROM,
 
     /* expr expr */
     GROUP_IMPLICIT,
@@ -96,7 +101,7 @@ struct group {
 struct group *new_group(size_t num);
 struct group *join_group(struct group *parent, struct group *child);
 struct group *join_group_no_free(struct group *parent, struct group *child);
-struct group *surround_group(struct group *group, enum group_type type);
+struct group *surround_group(struct group *group, enum group_type type, size_t n);
 void clear_group(struct group *group);
 void free_group(struct group *group);
 void output_group(struct group *group, int color);
@@ -117,10 +122,17 @@ struct value {
 };
 
 void compute_value(const struct group *group, struct value *value);
-void delete_value(struct value *value);
+void clear_value(struct value *value);
 void output_value(struct value *value);
 
 void throw_error(const char *msg, ...);
-int parse(struct group *group);
+
+#define PARSER_ERROR (-1)
+#define PARSER_OK (0)
+#define PARSER_CONTINUE (1)
+
+int init_parser(void);
+void reset_parser(void);
+int parse(const char *s);
 
 #endif

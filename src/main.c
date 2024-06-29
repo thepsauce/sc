@@ -119,7 +119,7 @@
  * Matrix
  *  (1 2;9 8;12 8)
  * Expression
- *  1*3, 4+9, choose 2 from {1,2,3}, (1,2,3) * 4, [1,4]^2
+ *  1*3, 4+9, choose 2 from {1,2,3}, (1,2,3) * 4, [1,4]
  *  I={x=2,y=2x+4}, I.x, I.y, I, A={x+y=z}, A where x=1 and y=2
  *  K={Ax=o} where o={0}^columns(A), K where A=(1 2;-4 5)
  */

@@ -1,22 +1,42 @@
 #include "parse.h"
 
-void vv_add(struct value *v1, struct value *v2)
+void operator_null(struct value *v, struct value *values)
 {
-    struct value *d;
-    if (v1->t > v2->t) {
-        struct value *tmp = v1;
-        v1 = v2;
-        v1 = tmp;
-        d = v2;
+    (void) v; (void) values;
+}
+
+void operator_positive(struct value *v, struct value *values)
+{
+    (void) v; (void) values;
+}
+
+void operator_negate(struct value *v, struct value *values)
+{
+    (void) v; (void) values;
+}
+
+void operator_not(struct value *v, struct value *values)
+{
+    (void) v; (void) values;
+}
+
+void operator_plus(struct value *v, struct value *values)
+{
+    struct value *v1, *v2;
+    if (values[0].t > values[1].t) {
+        v1 = &values[0];
+        v2 = &values[1];
     } else {
-        d = v1;
+        v1 = &values[1];
+        v2 = &values[0];
     }
     switch (v1->t) {
     case VALUE_NUMBER:
         switch (v2->t) {
         case VALUE_NUMBER:
-            d->t = VALUE_NUMBER;
-            mpf_add(d->v.f, v1->v.f, v2->v.f);
+            v->t = VALUE_NUMBER;
+            mpf_init(v->v.f);
+            mpf_add(v->v.f, v1->v.f, v2->v.f);
             break;
         default:
             break;
@@ -26,23 +46,18 @@ void vv_add(struct value *v1, struct value *v2)
     }
 }
 
-void vv_sub(struct value *v1, struct value *v2)
+void operator_minus(struct value *v, struct value *values)
 {
-    struct value *d;
-    if (v1->t > v2->t) {
-        struct value *tmp = v1;
-        v1 = v2;
-        v1 = tmp;
-        d = v2;
-    } else {
-        d = v1;
-    }
+    struct value *v1, *v2;
+    v1 = &values[0];
+    v2 = &values[1];
     switch (v1->t) {
     case VALUE_NUMBER:
         switch (v2->t) {
         case VALUE_NUMBER:
-            d->t = VALUE_NUMBER;
-            mpf_sub(d->v.f, v1->v.f, v2->v.f);
+            v->t = VALUE_NUMBER;
+            mpf_init(v->v.f);
+            mpf_sub(v->v.f, v1->v.f, v2->v.f);
             break;
         default:
             break;
@@ -52,200 +67,159 @@ void vv_sub(struct value *v1, struct value *v2)
     }
 }
 
-void operator_null(struct value *v, struct value *values, size_t n)
+void operator_multiply(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_positive(struct value *v, struct value *values, size_t n)
+void operator_divide(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_negate(struct value *v, struct value *values, size_t n)
+void operator_mod(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_not(struct value *v, struct value *values, size_t n)
+void operator_raise(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_plus(struct value *v, struct value *values, size_t n)
+void operator_lower(struct value *v, struct value *values)
 {
-    *v = values[0];
-    for (size_t i = 1; i < n; i++) {
-        vv_add(v, &values[i]);
-    }
+    (void) v; (void) values;
 }
 
-void operator_minus(struct value *v, struct value *values, size_t n)
+void operator_and(struct value *v, struct value *values)
 {
-    *v = values[0];
-    for (size_t i = 1; i < n; i++) {
-        vv_sub(v, &values[i]);
-    }
+    (void) v; (void) values;
 }
 
-void operator_multiply(struct value *v, struct value *values, size_t n)
+void operator_or(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_divide(struct value *v, struct value *values, size_t n)
+void operator_xor(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_mod(struct value *v, struct value *values, size_t n)
+void operator_if(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_raise(struct value *v, struct value *values, size_t n)
+void operator_less(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_lower(struct value *v, struct value *values, size_t n)
+void operator_less_than(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_and(struct value *v, struct value *values, size_t n)
+void operator_greater(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_or(struct value *v, struct value *values, size_t n)
+void operator_greater_than(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_xor(struct value *v, struct value *values, size_t n)
+void operator_equals(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_if(struct value *v, struct value *values, size_t n)
+void operator_not_equals(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_less(struct value *v, struct value *values, size_t n)
+void operator_comma(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_less_than(struct value *v, struct value *values, size_t n)
+void operator_semicolon(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_greater(struct value *v, struct value *values, size_t n)
+void operator_do(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_greater_than(struct value *v, struct value *values, size_t n)
+void operator_where(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_equals(struct value *v, struct value *values, size_t n)
+void operator_exclam(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_not_equals(struct value *v, struct value *values, size_t n)
+void operator_percent(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_comma(struct value *v, struct value *values, size_t n)
+void operator_else(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_semicolon(struct value *v, struct value *values, size_t n)
+void operator_round(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_do(struct value *v, struct value *values, size_t n)
+void operator_double_corner(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_where(struct value *v, struct value *values, size_t n)
+void operator_corner(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_exclam(struct value *v, struct value *values, size_t n)
+void operator_square(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_percent(struct value *v, struct value *values, size_t n)
+void operator_curly(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_else(struct value *v, struct value *values, size_t n)
+void operator_double_bar(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_round(struct value *v, struct value *values, size_t n)
+void operator_bar(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_double_corner(struct value *v, struct value *values, size_t n)
+void operator_choose_from(struct value *v, struct value *values)
 {
-    (void) v; (void) values; (void) n;
+    (void) v; (void) values;
 }
 
-void operator_corner(struct value *v, struct value *values, size_t n)
+void operate(struct value *v, struct value *values, enum group_type opr)
 {
-    (void) v; (void) values; (void) n;
-}
-
-void operator_square(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operator_curly(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operator_double_bar(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operator_bar(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operator_choose_from(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operator_implicit(struct value *v, struct value *values, size_t n)
-{
-    (void) v; (void) values; (void) n;
-}
-
-void operate(struct value *v, struct value *values, size_t n, enum group_type opr)
-{
-    void (*operators[])(struct value *v, struct value *values, size_t n) = {
+    void (*operators[])(struct value *v, struct value *values) = {
         [GROUP_NULL] = operator_null,
 
         /* opr expr */
@@ -295,19 +269,18 @@ void operate(struct value *v, struct value *values, size_t n, enum group_type op
         [GROUP_DOUBLE_BAR] = operator_double_bar,
         [GROUP_BAR] = operator_bar,
 
-        /* opr expr opr expr */
-        [GROUP_CHOOSE_FROM] = operator_choose_from,
+        [GROUP_ELEMENT_OF] = NULL,
 
         /* expr expr */
-        [GROUP_IMPLICIT] = operator_implicit,
+        [GROUP_IMPLICIT] = NULL,
 
         [GROUP_VARIABLE] = NULL,
         [GROUP_NUMBER] = NULL,
     };
-    (*operators[opr])(v, values, n);
+    (*operators[opr])(v, values);
 }
 
-void delete_value(struct value *v)
+void clear_value(struct value *v)
 {
     switch (v->t) {
     case VALUE_NUMBER:
@@ -326,21 +299,23 @@ void delete_value(struct value *v)
 
 void compute_value(const struct group *g, struct value *v)
 {
-    struct value values[g->n];
-    for (size_t i = 0; i < g->n; i++) {
-        compute_value(&g->g[i], &values[i]);
-    }
     switch (g->t) {
     case GROUP_NUMBER:
         v->t = VALUE_NUMBER;
         mpf_init_set(v->v.f, g->v.f);
         break;
-    default:
-        operate(v, values, g->n, g->t);
+    case GROUP_IMPLICIT:
+        break;
+    default: {
+        struct value values[g->n];
+        for (size_t i = 0; i < g->n; i++) {
+            compute_value(&g->g[i], &values[i]);
+        }
+        operate(v, values, g->t);
+        for (size_t i = 0; i < g->n; i++) {
+            clear_value(&values[i]);
+        }
     }
-    /* ignore first element */
-    for (size_t i = 1; i < g->n; i++) {
-        delete_value(&values[i]);
     }
 }
 

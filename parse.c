@@ -33,11 +33,14 @@ void throw_error(const char *msg, ...)
     longjmp(Parser.jb, 0);
 }
 
-static void skip_space(void)
+static size_t skip_space(void)
 {
+    size_t n = 0;
     while (isspace(Parser.p[0])) {
         Parser.p++;
+        n++;
     }
+    return n;
 }
 
 static void read_word(void)
@@ -84,6 +87,8 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
     } prefixes[] = {
         { "+", GROUP_POSITIVE, 6 },
         { "-", GROUP_NEGATE, 6 },
+        { "√", GROUP_SQRT, 9 },
+        { "∛", GROUP_CBRT, 9 },
         { "negate", GROUP_NEGATE, 6 },
         { "not", GROUP_NOT, 4 },
     };
@@ -100,6 +105,7 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
 
         { "where", GROUP_WHERE, 3 },
         { "if", GROUP_IF, 3 },
+        { "do", GROUP_DO, 3 },
 
         { "and", GROUP_AND, 4 },
         { "or", GROUP_OR, 4 },
@@ -119,20 +125,16 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
         { "≤", GROUP_LESS_THAN, 5 },
         { "≥", GROUP_GREATER_THAN, 5 },
 
-        { "-", GROUP_MINUS, 6 },
         { "+", GROUP_PLUS, 6 },
+        { "-", GROUP_MINUS, 6 },
         { "*", GROUP_MULTIPLY, PREC_MULTIPLY },
         { "/", GROUP_DIVIDE, PREC_MULTIPLY },
         { "mod", GROUP_MOD, PREC_MULTIPLY },
 
-        { "^", GROUP_RAISE, 8 },
-        { "do", GROUP_DO, 8 },
+        { "∈", GROUP_ELEMENT_OF, 8 },
 
-        { "_", GROUP_LOWER, 10 },
-
-        /* from is here because it is part of choose */
-        /* (-1 means this will always be passed to the parent) */
-        { "from", 0, -1 },
+        { "^", GROUP_RAISE, 9 },
+        { "_", GROUP_LOWER, 9 },
     };
 
     /* expr opr */
@@ -141,8 +143,10 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
         enum group_type t;
         int p;
     } suffixes[] = {
-        { "!", GROUP_EXCLAM, 9 },
-        { "%", GROUP_PERCENT, 9 },
+        { "!", GROUP_EXCLAM, 10 },
+        { "%", GROUP_PERCENT, 10 },
+        { "²", GROUP_RAISE2, 10 },
+        { "³", GROUP_RAISE3, 9 },
         { "else", GROUP_ELSE, 3 },
     };
 
@@ -150,28 +154,18 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
     static /* no const */ struct match_operator {
         const char *l, *r;
         enum group_type t;
-        size_t n; /* number of open brackets */
-        /* (important when it ends and starts with
-         * the same symbol)
-         */
     } matches[] = {
-        { "(", ")", GROUP_ROUND, 0 },
-        { "<<", ">>", GROUP_DOUBLE_CORNER, 0 },
-        { "<", ">", GROUP_CORNER, 0 },
-        { "[", "]", GROUP_SQUARE, 0 },
-        { "{", "}", GROUP_CURLY, 0 },
-        { "||", "||", GROUP_DOUBLE_BAR, 0 },
-        { "|", "|", GROUP_BAR, 0 },
+        { "(", ")", GROUP_ROUND },
+        { "«", "»", GROUP_DOUBLE_CORNER },
+        { "<<", ">>", GROUP_DOUBLE_CORNER },
+        { "<", ">", GROUP_CORNER },
+        { "[", "]", GROUP_SQUARE },
+        { "{", "}", GROUP_CURLY },
+        { "‖", "‖", GROUP_DOUBLE_BAR },
+        { "||", "||", GROUP_DOUBLE_BAR },
+        { "|", "|", GROUP_BAR },
     };
 
-    /* opr expr opr expr */
-    static const struct unique_operator {
-        const char *s1, *s2;
-        enum group_type t;
-        int p;
-    } uniques[] = {
-        { "choose", "from", GROUP_CHOOSE_FROM, 4 },
-    };
 
     skip_space();
 
@@ -188,33 +182,10 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
         }
     }
 
-    for (size_t i = 0; i < ARRAY_SIZE(uniques); i++) {
-        const size_t n = begins_with(uniques[i].s1);
-        if (n > 0) {
-            if (uniques[i].p <= p) {
-                return;
-            }
-            Parser.p += n;
-            g->t = uniques[i].t;
-            g->g = new_group(2);
-            read_expression(false, uniques[i].p, &g->g[0]);
-            skip_space();
-            const size_t n = begins_with(uniques[i].s2);
-            if (n == 0) {
-                throw_error("missing matching '%s' for '%s'",
-                        uniques[i].s2, uniques[i].s1);
-            }
-            Parser.p += n;
-            read_expression(false, uniques[i].p, &g->g[1]);
-            g->n = 2;
-            goto next_infix;
-        }
-    }
-
     for (size_t i = 0; i < ARRAY_SIZE(matches); i++) {
         const size_t n = begins_with(matches[i].l);
         if (n > 0) {
-            if (matches[i].n > 0 && strcmp(matches[i].l, matches[i].r) == 0) {
+            if (strcmp(matches[i].l, Parser.br) == 0) {
                 return;
             }
 
@@ -224,9 +195,11 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
             g->g = new_group(1);
             g->n = 1;
 
-            matches[i].n++;
+            char old[8];
+            strcpy(old, Parser.br);
+            strcpy(Parser.br, matches[i].r);
+            printf("opened: %s, need: %s\n", matches[i].l, Parser.br);
             read_expression(false, 0, g->g);
-            matches[i].n--;
 
             skip_space();
             const size_t n = begins_with(matches[i].r);
@@ -235,6 +208,8 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
                         matches[i].r, matches[i].l);
             }
             Parser.p += n;
+            strcpy(Parser.br, old);
+            printf("closed: %s\ncontinuing with: %s\n", matches[i].l, Parser.p);
             goto next_infix;
         }
     }
@@ -250,6 +225,25 @@ static void read_expression(bool e, int p /* precedence */, struct group *g)
         read_number();
         g->t = GROUP_NUMBER;
         mpf_init_set(g->v.f, Parser.f);
+    } else if (Parser.p[0] != '\0') {
+        if (Parser.br[0] != '\0' && begins_with(Parser.br) > 0) {
+            throw_error("need value");
+            return;
+        }
+        g->t = GROUP_VARIABLE;
+        Parser.w = Parser.p;
+        if (!(Parser.p[0] & 0x80)) {
+            Parser.p++;
+        } else {
+            while (Parser.p++, (Parser.p[0] & 0xc0) == 0x80) {
+                (void) 0;
+            }
+        }
+        Parser.n = Parser.p - Parser.w;
+        g->v.w = dict_putl(Parser.w, Parser.n);
+        if (g->v.w == NULL) {
+            throw_error("%s", strerror(errno));
+        }
     } else {
         if (e) {
             return;
@@ -269,9 +263,7 @@ next_infix:
             Parser.p += n;
             struct group *r = new_group(1);
             read_expression(false, infixes[i].p, r);
-            if (g->t != infixes[i].t) {
-                surround_group(g, infixes[i].t);
-            }
+            surround_group(g, infixes[i].t);
             join_group(g, r);
             goto next_infix;
         }
@@ -293,9 +285,7 @@ next_infix:
         struct group *r = new_group(1);
         read_expression(true, PREC_MULTIPLY, r);
         if (r->t != GROUP_NULL) {
-            if (g->t != GROUP_IMPLICIT) {
-                surround_group(g, GROUP_IMPLICIT);
-            }
+            surround_group(g, GROUP_IMPLICIT);
             join_group(g, r);
         } else {
             free(r);
@@ -307,11 +297,15 @@ next_infix:
 
 int parse(struct group *g)
 {
-    mpf_init(Parser.f);
     if (setjmp(Parser.jb) > 0) {
         return -1;
     }
+    Parser.br[0] = '\0';
+    mpf_init(Parser.f);
     Parser.p = Parser.s;
     read_expression(false, 0, g);
+    if (Parser.p[0] != '\0') {
+        throw_error("invalid tokens after here");
+    }
     return 0;
 }
