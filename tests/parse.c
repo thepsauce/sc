@@ -2,6 +2,7 @@
 #include "sc.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int main(void)
@@ -21,14 +22,12 @@ int main(void)
         switch (parse(line)) {
         case PARSER_ERROR:
             printf("error\n>>> ");
-            clear_group(Parser.st[0]);
             reset_parser();
             break;
         case PARSER_OK:
             output_group(Parser.st[0], 0);
             printf("\n");
             reset_parser();
-            clear_group(Parser.st[0]);
             printf(">>> ");
             break;
         case PARSER_CONTINUE:
@@ -40,7 +39,6 @@ int main(void)
             break;
         }
     }
-
     return 0;
 }
 

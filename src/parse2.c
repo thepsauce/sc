@@ -28,6 +28,7 @@ int init_parser(void)
 
 void reset_parser(void)
 {
+    clear_group(Parser.st[0]);
     Parser.st[0]->t = GROUP_NULL;
     Parser.st[0]->g = NULL;
     Parser.st[0]->n = 0;
@@ -157,61 +158,6 @@ static const int Precedences[] = {
     [GROUP_VARIABLE] = INT_MAX,
     [GROUP_NUMBER] = INT_MAX,
 };
-
-/*
-3+3*4
-
-3
-0.
-1. 3 → ∞
-
-+
-0.
-1. 3+ → 6
-
-3
-0.
-1. 3+ → 6
-2. 3 → ∞
-
-*
-0.
-1. 3+ → 6
-3. 3* → 8
-
-4
-0.
-1. 3+ → 6
-2. 3* → 8
-3. 4 → 4
-
---------------------------
-
-(3+4)*3
-
-(
-0.
-1. ( → 0
-
-3
-0.
-1. ( → 0
-2. 3 → ∞
-
-+
-0.
-1. ( → 0
-2. 3+ → 6
-
-4
-0.
-1. ( → 0
-2. + → 6
-3. 4 → ∞
-
-)
-0.
-*/
 
 struct group *walk_up_precedences(int p)
 {
@@ -393,7 +339,6 @@ infix:
         const size_t n = begins_with(infixes[i].s);
         if (n > 0) {
             g = walk_up_precedences(Precedences[infixes[i].t]);
-
             Parser.p += n;
             g = surround_group(g, infixes[i].t, 2);
             if (g == NULL) {
@@ -407,7 +352,11 @@ infix:
     for (size_t i = 0; i < ARRAY_SIZE(suffixes); i++) {
         const size_t n = begins_with(suffixes[i].s);
         if (n > 0) {
+            g = walk_up_precedences(Precedences[suffixes[i].t]);
             Parser.p += n;
+            if (surround_group(g, suffixes[i].t, 1) == NULL) {
+                return PARSER_ERROR;
+            }
             goto infix;
         }
     }
@@ -446,6 +395,17 @@ infix:
             goto infix;
         }
     }
+
+    /* implicit operator */
+    /* for example: 2a, 2 2, a bc */
+    g = walk_up_precedences(Precedences[GROUP_IMPLICIT]);
+    g = surround_group(g, GROUP_IMPLICIT, 2);
+    if (g == NULL) {
+        return PARSER_ERROR;
+    }
+    Parser.st[Parser.sp++] = g;
+
+    goto beg;
 
     /*
      * ₁₂₃₄₅ ⁶⁸
