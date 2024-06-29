@@ -1,4 +1,4 @@
-#include "parse.h"
+#include "core.h"
 
 void operator_null(struct value *v, struct value *values)
 {
@@ -297,19 +297,27 @@ void clear_value(struct value *v)
     }
 }
 
-void compute_value(const struct group *g, struct value *v)
+void compute_deeper_value(const struct group *g, struct value *v)
 {
+    struct variable *var;
+
     switch (g->t) {
     case GROUP_NUMBER:
         v->t = VALUE_NUMBER;
         mpf_init_set(v->v.f, g->v.f);
         break;
-    case GROUP_IMPLICIT:
+    case GROUP_VARIABLE:
+    case GROUP_LOWER:
+        var = get_variable(g);
+        if (var == NULL) {
+            throw_error("variable '%s' does not exist", g->v.w);
+        }
+        compute_deeper_value(&var->value, v);
         break;
     default: {
         struct value values[g->n];
         for (size_t i = 0; i < g->n; i++) {
-            compute_value(&g->g[i], &values[i]);
+            compute_deeper_value(&g->g[i], &values[i]);
         }
         operate(v, values, g->t);
         for (size_t i = 0; i < g->n; i++) {
@@ -317,6 +325,38 @@ void compute_value(const struct group *g, struct value *v)
         }
     }
     }
+}
+
+int compute_value(const struct group *g, struct value *v)
+{
+    struct variable *var;
+
+    if (setjmp(Core.jb) != 0) {
+        return -1;
+    }
+    switch (g->t) {
+    case GROUP_IMPLICIT:
+        break;
+    case GROUP_EQUALS:
+        var = get_variable(g->g);
+        if (g->g->t == GROUP_IMPLICIT) {
+            /* function declaration */
+            break;
+        }
+        if (g->g->t == GROUP_VARIABLE) {
+            if (var == NULL) {
+                add_variable(&g->g[0], &g->g[1]);
+            } else {
+                copy_group(&var->value, &g->g[1]);
+            }
+            compute_deeper_value(&g->g[1], v);
+            break;
+        }
+    /* fall through */
+    default:
+        compute_deeper_value(g, v);
+    }
+    return 0;
 }
 
 void output_value(struct value *v)
