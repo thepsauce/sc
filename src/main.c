@@ -1,4 +1,5 @@
-#include "sc.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 /**
  * 1

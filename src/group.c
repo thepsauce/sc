@@ -1,4 +1,4 @@
-#include "parse.h"
+#include "group.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -10,10 +10,37 @@ struct group *new_group(size_t n)
 
     g = calloc(n, sizeof(*g));
     if (g == NULL) {
-        throw_error("%s", strerror(errno));
         return NULL;
     }
     return g;
+}
+
+int copy_group(struct group *dest, const struct group *src)
+{
+    dest->t = src->t;
+    dest->v = src->v;
+    switch (src->t) {
+    case GROUP_NUMBER:
+        mpf_init_set(dest->v.f, src->v.f);
+        /* fall through */
+    case GROUP_VARIABLE:
+        dest->g = NULL;
+        dest->n = 0;
+        break;
+    default:
+        dest->g = new_group(src->n);
+        if (dest->g == NULL) {
+            return -1;
+        }
+        dest->n = src->n;
+        for (size_t i = 0; i < dest->n; i++) {
+            if (copy_group(&dest->g[i], &src->g[i]) == -1) {
+                free(dest->g);
+                return -1;
+            }
+        }
+    }
+    return 0;
 }
 
 struct group *join_group(struct group *p, struct group *c)
@@ -29,7 +56,6 @@ struct group *join_group_no_free(struct group *p, struct group *c)
 
     g = reallocarray(p->g, p->n + 1, sizeof(*p->g));
     if (g == NULL) {
-        throw_error("%s", strerror(errno));
         return NULL;
     }
     p->g = g;
