@@ -35,7 +35,7 @@ void reset_parser(void)
     Parser.sp = 1;
 }
 
-void throw_error(const char *msg, ...)
+static void indicate_error(const char *msg, ...)
 {
     while (Parser.p != Parser.s) {
         Parser.p--;
@@ -47,7 +47,7 @@ void throw_error(const char *msg, ...)
     va_start(l, msg);
     vfprintf(stderr, msg, l);
     va_end(l);
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 }
 
 static size_t skip_space(void)
@@ -63,7 +63,7 @@ static size_t skip_space(void)
 static int read_word(void)
 {
     if (!isalpha(Parser.p[0])) {
-        throw_error("expected word");
+        indicate_error("expected word");
         return PARSER_ERROR;
     }
     Parser.w = Parser.p;
@@ -77,7 +77,7 @@ static int read_word(void)
 static int read_number(void)
 {
     if (gmp_sscanf(Parser.p, "%Ff%n", Parser.f, &Parser.n) != 1) {
-        throw_error("expected number");
+        indicate_error("expected number");
         return PARSER_ERROR;
     }
     Parser.p += Parser.n;
@@ -95,8 +95,6 @@ static size_t begins_with(const char *s)
     }
     return n;
 }
-
-#define PREC_MULTIPLY 7
 
 static const int Precedences[] = {
     [GROUP_NULL] = 0,
@@ -123,9 +121,6 @@ static const int Precedences[] = {
     [GROUP_OR] = 4,
     [GROUP_XOR] = 4,
 
-    [GROUP_POSITIVE] = 6,
-    [GROUP_NEGATE] = 6,
-
     [GROUP_LESS] = 5,
     [GROUP_LESS_THAN] = 5,
     [GROUP_GREATER] = 5,
@@ -133,27 +128,31 @@ static const int Precedences[] = {
     [GROUP_EQUALS] = 5,
     [GROUP_NOT_EQUALS] = 5,
 
+    [GROUP_POSITIVE] = 6,
+    [GROUP_NEGATE] = 6,
+
     [GROUP_PLUS] = 6,
     [GROUP_MINUS] = 6,
 
-    [GROUP_MULTIPLY] = PREC_MULTIPLY,
-    [GROUP_DIVIDE] = PREC_MULTIPLY,
-    [GROUP_MOD] = PREC_MULTIPLY,
+    [GROUP_MULTIPLY] = 7,
+    [GROUP_DIVIDE] = 7,
+    [GROUP_MOD] = 7,
 
-    [GROUP_IMPLICIT] = PREC_MULTIPLY,
+    [GROUP_IMPLICIT] = 7,
 
     [GROUP_ELEMENT_OF] = 8,
 
     [GROUP_SQRT] = 9,
     [GROUP_CBRT] = 9,
 
-    [GROUP_LOWER] = 9,
     [GROUP_RAISE] = 9,
     [GROUP_RAISE2] = 9,
     [GROUP_RAISE3] = 9,
 
-    [GROUP_EXCLAM] = 10,
-    [GROUP_PERCENT] = 10,
+    [GROUP_LOWER] = 10,
+
+    [GROUP_EXCLAM] = 11,
+    [GROUP_PERCENT] = 11,
 
     [GROUP_VARIABLE] = INT_MAX,
     [GROUP_NUMBER] = INT_MAX,
@@ -302,7 +301,7 @@ beg:
         g->t = GROUP_VARIABLE;
         g->v.w = dict_putl(Parser.w, Parser.n);
         if (g->v.w == NULL) {
-            throw_error("%s", strerror(errno));
+            indicate_error("%s", strerror(errno));
             return PARSER_ERROR;
         }
     } else if (isdigit(Parser.p[0]) || Parser.p[0] == '.') {
@@ -322,7 +321,7 @@ beg:
         Parser.n = Parser.p - Parser.w;
         g->v.w = dict_putl(Parser.w, Parser.n);
         if (g->v.w == NULL) {
-            throw_error("%s", strerror(errno));
+            indicate_error("%s", strerror(errno));
             return PARSER_ERROR;
         }
     } else {
@@ -376,22 +375,22 @@ infix:
                 sp--;
             }
             if (sp == 0) {
-                throw_error("not open: '%s' needs matching '%s'",
+                indicate_error("not open: '%s' needs matching '%s'",
                         matches[i].r, matches[i].l);
                 return PARSER_ERROR;
             }
-            struct group *const l = Parser.st[sp - 1];
-            if (l->t != matches[i].t) {
+            struct group *const left = Parser.st[sp - 1];
+            if (left->t != matches[i].t) {
                 if (matches[i].l == matches[i].r) {
                     goto beg;
                 }
-                throw_error("collision: another pair needs to be closed first");
+                indicate_error("collision: a previous pair needs to be closed first");
                 return PARSER_ERROR;
             }
 
             Parser.p += n;
             Parser.sp = sp;
-            g = l;
+            g = left;
             goto infix;
         }
     }
@@ -406,18 +405,4 @@ infix:
     Parser.st[Parser.sp++] = g;
 
     goto beg;
-
-    /*
-     * ₁₂₃₄₅ ⁶⁸
-    l = (f: x → x², g: y → y)
-    l_1(3) ⇒ 9
-    l_2(4) ⇒ 4
-    l_3 = 8 ⇒ ERROR
-    INSTEAD: g = (l, 8)
-    f(x) = sum(i = 1, l_n, l_i(x))
-
-    m = ( 1 2 3 ; 3 4 5 ; 5 6 7 )
-    */
-
-    return PARSER_OK;
 }

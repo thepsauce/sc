@@ -1,5 +1,4 @@
 #include "parse.h"
-#include "sc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
