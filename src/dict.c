@@ -15,8 +15,8 @@ static char *search_entryl(const char *word, size_t len, size_t *pIndex)
         const size_t m = (l + r) / 2;
 
         int cmp = strncmp(Dict.words[m], word, len);
-        if (cmp == 0 && word[len] != '\0') {
-            cmp = -1;
+        if (cmp == 0) {
+            cmp = (unsigned char) Dict.words[m][len];
         }
         if (cmp == 0) {
             if (pIndex != NULL) {

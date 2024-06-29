@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-extern struct dictionary Dict;
-
 void dict_dump(void)
 {
     printf("%zu words:\n", Dict.num);
@@ -30,8 +28,9 @@ int main(void)
             dict_dump();
             continue;
         }
-        char *const ent = dict_put(line);
+        char *const ent = dict_putl(line, lenLine);
         printf("%p, %s\n", ent, ent);
     }
     return 0;
 }
+
