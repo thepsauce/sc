@@ -294,6 +294,8 @@ void clear_value(struct value *v)
         break;
     case VALUE_RANGE:
         break;
+    default:
+        break;
     }
 }
 
@@ -362,6 +364,9 @@ int compute_value(const struct group *g, struct value *v)
 void output_value(struct value *v)
 {
     switch (v->t) {
+    case VALUE_BOOL:
+        printf("%s", v->v.b ? "true" : "false");
+        break;
     case VALUE_NUMBER:
         mpf_out_str(stdout, 10, 0, v->v.f);
         break;
@@ -372,6 +377,8 @@ void output_value(struct value *v)
     case VALUE_SET:
         break;
     case VALUE_RANGE:
+        break;
+    default:
         break;
     }
 }

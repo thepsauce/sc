@@ -4,22 +4,26 @@
 #include "group.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <gmp.h>
 
 #include <setjmp.h>
 
 enum value_type {
+    VALUE_BOOL,
     VALUE_NUMBER,
     VALUE_VECTOR,
     VALUE_MATRIX,
     VALUE_SET,
-    VALUE_RANGE
+    VALUE_RANGE,
+    VALUE_MAX
 };
 
 struct value {
     enum value_type t;
     union {
         mpf_t f;
+        bool b;
     } v;
 };
 

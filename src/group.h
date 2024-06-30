@@ -65,6 +65,8 @@ enum group_type {
 
     GROUP_VARIABLE,
     GROUP_NUMBER,
+
+    GROUP_MAX
 };
 
 struct group {
