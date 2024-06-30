@@ -161,7 +161,7 @@ static const int Precedences[] = {
 struct group *walk_up_precedences(int p)
 {
     while (Parser.sp > 1) {
-        if (Precedences[Parser.st[Parser.sp - 2]->t] <= p) {
+        if (Precedences[Parser.st[Parser.sp - 2]->t] < p) {
             break;
         }
         Parser.sp--;
@@ -281,6 +281,9 @@ beg:
             if (g == NULL) {
                 return PARSER_ERROR;
             }
+            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+                return PARSER_ERROR;
+            }
             Parser.st[Parser.sp++] = g;
             goto beg;
         }
@@ -292,6 +295,9 @@ beg:
             Parser.p += n;
             g = surround_group(g, matches[i].t, 1);
             if (g == NULL) {
+                return PARSER_ERROR;
+            }
+            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
                 return PARSER_ERROR;
             }
             Parser.st[Parser.sp++] = g;
@@ -344,6 +350,9 @@ infix:
             Parser.p += n;
             g = surround_group(g, infixes[i].t, 2);
             if (g == NULL) {
+                return PARSER_ERROR;
+            }
+            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
                 return PARSER_ERROR;
             }
             Parser.st[Parser.sp++] = g;
@@ -405,7 +414,9 @@ infix:
     if (g == NULL) {
         return PARSER_ERROR;
     }
+    if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+        return PARSER_ERROR;
+    }
     Parser.st[Parser.sp++] = g;
-
     goto beg;
 }
