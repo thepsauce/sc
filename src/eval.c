@@ -1,5 +1,9 @@
 #include "core.h"
 
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+
 void noop(struct value *v, struct value *values)
 {
     (void) v;
@@ -7,112 +11,16 @@ void noop(struct value *v, struct value *values)
     /* does nothing */
 }
 
-void number_negate(struct value *v, struct value *values)
-{
-    v->t = VALUE_NUMBER;
-    mpf_init(v->v.f);
-    mpf_neg(v->v.f, values[0].v.f);
-}
+static void operate(struct value *v, struct value *values, size_t n, enum group_type opr);
 
-void bool_not(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    v->v.b = !values[0].v.b;
-}
+#include "eval_number.h"
+#include "eval_bool.h"
+#include "eval_matrix.h"
 
-void number_plus_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_NUMBER;
-    mpf_init(v->v.f);
-    mpf_add(v->v.f, values[0].v.f, values[1].v.f);
-}
-
-void number_minus_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_NUMBER;
-    mpf_init(v->v.f);
-    mpf_sub(v->v.f, values[0].v.f, values[1].v.f);
-}
-
-void number_multiply_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_NUMBER;
-    mpf_init(v->v.f);
-    mpf_mul(v->v.f, values[0].v.f, values[1].v.f);
-}
-
-void number_divide_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_NUMBER;
-    mpf_init(v->v.f);
-    mpf_div(v->v.f, values[0].v.f, values[1].v.f);
-}
-
-void bool_and_bool(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    v->v.b = values[0].v.b & values[1].v.b;
-}
-
-void bool_or_bool(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    v->v.b = values[0].v.b | values[1].v.b;
-}
-
-void bool_xor_bool(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    v->v.b = values[0].v.b ^ values[1].v.b;
-}
-
-void number_less_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp < 0;
-}
-
-void number_less_equal_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp <= 0;
-}
-
-void number_greater_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp > 0;
-}
-
-void number_greater_equal_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp >= 0;
-}
-
-void number_equal_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp == 0;
-}
-
-void number_not_equal_number(struct value *v, struct value *values)
-{
-    v->t = VALUE_BOOL;
-    const int cmp = mpf_cmp(values[0].v.f, values[1].v.f);
-    v->v.b = cmp != 0;
-}
-
-void operate(struct value *v, struct value *values, size_t n, enum group_type opr)
+static void operate(struct value *v, struct value *values, size_t n, enum group_type opr)
 {
     static void (*single_operators[GROUP_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
         [GROUP_POSITIVE][VALUE_NUMBER] = noop,
-        [GROUP_POSITIVE][VALUE_VECTOR] = noop,
         [GROUP_POSITIVE][VALUE_MATRIX] = noop,
 
         [GROUP_NEGATE][VALUE_NUMBER] = number_negate,
@@ -124,6 +32,14 @@ void operate(struct value *v, struct value *values, size_t n, enum group_type op
         [GROUP_MINUS][VALUE_NUMBER][VALUE_NUMBER] = number_minus_number,
         [GROUP_MULTIPLY][VALUE_NUMBER][VALUE_NUMBER] = number_multiply_number,
         [GROUP_DIVIDE][VALUE_NUMBER][VALUE_NUMBER] = number_divide_number,
+
+        [GROUP_MULTIPLY][VALUE_NUMBER][VALUE_MATRIX] = number_multiply_matrix,
+        [GROUP_MULTIPLY][VALUE_MATRIX][VALUE_NUMBER] = matrix_multiply_number,
+
+        [GROUP_MULTIPLY][VALUE_MATRIX][VALUE_MATRIX] = matrix_multiply_matrix,
+
+        [GROUP_PLUS][VALUE_MATRIX][VALUE_MATRIX] = matrix_plus_matrix,
+        [GROUP_MINUS][VALUE_MATRIX][VALUE_MATRIX] = matrix_minus_matrix,
 
         [GROUP_AND][VALUE_BOOL][VALUE_BOOL] = bool_and_bool,
         [GROUP_OR][VALUE_BOOL][VALUE_BOOL] = bool_or_bool,
@@ -162,9 +78,12 @@ void clear_value(struct value *v)
     case VALUE_NUMBER:
         mpf_clear(v->v.f);
         break;
-    case VALUE_VECTOR:
-        break;
     case VALUE_MATRIX:
+        for (size_t i = 0, n = v->v.m.m * v->v.m.n;
+                i < n; i++) {
+            clear_value(&v->v.m.v[i]);
+        }
+        free(v->v.m.v);
         break;
     case VALUE_SET:
         break;
@@ -178,7 +97,9 @@ void clear_value(struct value *v)
 void compute_deeper_value(const struct group *g, struct value *v)
 {
     struct variable *var;
+    bool cw;
 
+beg:
     switch (g->t) {
     case GROUP_NUMBER:
         v->t = VALUE_NUMBER;
@@ -190,7 +111,46 @@ void compute_deeper_value(const struct group *g, struct value *v)
         if (var == NULL) {
             throw_error("variable '%s' does not exist", g->v.w);
         }
-        compute_deeper_value(&var->value, v);
+        break;
+    case GROUP_COMMA:
+        if (Core.w.m == 0) {
+            Core.w.m = 1;
+            cw = true;
+        } else {
+            cw = false;
+        }
+        compute_deeper_value(&g->g[0], v);
+        if (v->t != VALUE_MATRIX) {
+            Core.w.n++;
+            Core.w.v = reallocarray(Core.w.v, Core.w.n * Core.w.m, sizeof(*Core.w.v));
+            Core.w.v[Core.w.i++] = *v;
+        }
+        compute_deeper_value(&g->g[1], v);
+        if (v->t != VALUE_MATRIX) {
+            Core.w.n++;
+            Core.w.v = reallocarray(Core.w.v, Core.w.n * Core.w.m, sizeof(*Core.w.v));
+            Core.w.v[Core.w.i++] = *v;
+        }
+        v->t = VALUE_MATRIX;
+        if (cw) {
+            v->v.m.v = Core.w.v;
+            v->v.m.m = Core.w.m;
+            v->v.m.n = Core.w.n;
+            Core.w.v = NULL;
+            Core.w.m = 0;
+            Core.w.n = 0;
+            Core.w.i = 0;
+        }
+        break;
+    case GROUP_ROUND:
+        switch (g->g[0].t) {
+        case GROUP_SEMICOLON:
+            compute_deeper_value(&g->g[0].g[0], v);
+            break;
+        default:
+            g = &g->g[0];
+            goto beg;
+        }
         break;
     default: {
         struct value values[g->n];
@@ -213,8 +173,6 @@ int compute_value(const struct group *g, struct value *v)
         return -1;
     }
     switch (g->t) {
-    case GROUP_IMPLICIT:
-        break;
     case GROUP_EQUAL:
         var = get_variable(g->g);
         if (g->g->t == GROUP_IMPLICIT) {
@@ -246,9 +204,23 @@ void output_value(struct value *v)
     case VALUE_NUMBER:
         mpf_out_str(stdout, 10, 0, v->v.f);
         break;
-    case VALUE_VECTOR:
-        break;
     case VALUE_MATRIX:
+        if (v->v.m.m == 1) {
+            printf("( ");
+            for (size_t i = 0; i < v->v.m.n; i++) {
+                output_value(&v->v.m.v[i]);
+                printf(" ");
+            }
+            printf(")");
+        } else {
+            for (size_t i = 0; i < v->v.m.n; i++) {
+                for (size_t j = 0; j < v->v.m.m; j++) {
+                    output_value(&v->v.m.v[i + j * v->v.m.n]);
+                    printf(" ");
+                }
+                printf("\n");
+            }
+        }
         break;
     case VALUE_SET:
         break;

@@ -12,11 +12,23 @@
 enum value_type {
     VALUE_BOOL,
     VALUE_NUMBER,
-    VALUE_VECTOR,
+    /* VALUE_VECTOR, (matrix of size 1 x n) */
     VALUE_MATRIX,
     VALUE_SET,
     VALUE_RANGE,
     VALUE_MAX
+};
+
+struct value;
+
+struct vector {
+    struct value *v;
+    size_t n;
+};
+
+struct matrix {
+    struct value *v;
+    size_t m, n;
 };
 
 struct value {
@@ -24,6 +36,9 @@ struct value {
     union {
         mpf_t f;
         bool b;
+        struct matrix /* vector */ v;
+        struct matrix m;
+        struct matrix /* set */ s;
     } v;
 };
 
@@ -38,8 +53,17 @@ struct variable {
 };
 
 extern struct core {
+    /* all variables */
     struct variable *v;
     size_t nv;
+
+    struct working_matrix {
+        struct value *v;
+        size_t m, n;
+        size_t i;
+    } w;
+    /* set when calling compute_value and used
+     * for throw_error */
     jmp_buf jb;
 } Core;
 
