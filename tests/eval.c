@@ -1,27 +1,53 @@
 #include "parse.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include <readline/readline.h>
+#include <readline/history.h>
 
 int main(void)
 {
-    char *line = NULL;
-    size_t szLine = 0;
-    ssize_t lenLine;
+    char *line;
+    size_t n;
+    struct {
+        char *p;
+        size_t n;
+        size_t c;
+    } entire = { NULL, 0, 0 };
     struct value v;
+    const char *prompt = ">>> ";
 
     init_parser();
 
-    printf(">>> ");
-    while ((lenLine = getline(&line, &szLine, stdin)) > 0) {
-        line[lenLine - 1] = '\0';
+    while ((line = readline(prompt)) != NULL) {
+        n = strlen(line);
+        if (n == 0) {
+            continue;
+        }
         if (strcmp(line, "quit") == 0) {
             break;
         }
+
+        if (entire.n + n + 1 > entire.c) {
+            entire.c *= 2;
+            entire.c += n + 1;
+            entire.p = realloc(entire.p, entire.c);
+            if (entire.p == NULL) {
+                return 1;
+            }
+        }
+        memcpy(&entire.p[entire.n], line, n);
+        entire.n += n;
+        entire.p[entire.n++] = '\n';
+
         switch (parse(line)) {
         case PARSER_ERROR:
-            printf("error\n>>> ");
+            printf("error\n");
             reset_parser();
+            entire.n = 0;
+            prompt = ">>> ";
             break;
         case PARSER_OK:
             if (compute_value(Parser.st[0], &v) == 0) {
@@ -32,17 +58,17 @@ int main(void)
                 printf("\n");
             }
             reset_parser();
-            printf(">>> ");
+            entire.p[entire.n - 1] = '\0';
+            entire.n = 0;
+            add_history(entire.p);
+            prompt = ">>> ";
             break;
         case PARSER_CONTINUE:
-            if (Parser.st[0]->t == GROUP_NULL) {
-                printf(">>> ");
-                continue;
-            }
-            printf("... ");
+            prompt = "... ";
             break;
         }
+        free(line);
     }
-
+    free(entire.p);
     return 0;
 }
