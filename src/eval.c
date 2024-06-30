@@ -339,7 +339,7 @@ int compute_value(const struct group *g, struct value *v)
     switch (g->t) {
     case GROUP_IMPLICIT:
         break;
-    case GROUP_EQUALS:
+    case GROUP_EQUAL:
         var = get_variable(g->g);
         if (g->g->t == GROUP_IMPLICIT) {
             /* function declaration */
