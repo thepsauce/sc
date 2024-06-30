@@ -260,6 +260,8 @@ int parse(const char *s)
         { doubleBar2, doubleBar2, GROUP_DOUBLE_BAR },
         { doubleBar, doubleBar, GROUP_DOUBLE_BAR },
         { bar, bar, GROUP_BAR },
+        { "⌈", "⌉", GROUP_CEIL },
+        { "⌊", "⌋", GROUP_FLOOR },
     };
 
     struct group *g;

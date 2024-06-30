@@ -59,6 +59,8 @@ enum group_type {
     GROUP_CURLY,
     GROUP_DOUBLE_BAR,
     GROUP_BAR,
+    GROUP_CEIL,
+    GROUP_FLOOR,
 
     /* expr expr */
     GROUP_IMPLICIT,
