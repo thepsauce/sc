@@ -97,7 +97,6 @@ void clear_value(struct value *v)
 void compute_deeper_value(const struct group *g, struct value *v)
 {
     struct variable *var;
-    bool cw;
 
 beg:
     switch (g->t) {
@@ -122,36 +121,6 @@ beg:
             for (size_t i = 0; i < g->n; i++) {
                 clear_value(&values[i]);
             }
-        }
-        break;
-    case GROUP_COMMA:
-        if (Core.w.m == 0) {
-            Core.w.m = 1;
-            cw = true;
-        } else {
-            cw = false;
-        }
-        compute_deeper_value(&g->g[0], v);
-        if (v->t != VALUE_MATRIX) {
-            Core.w.n++;
-            Core.w.v = reallocarray(Core.w.v, Core.w.n * Core.w.m, sizeof(*Core.w.v));
-            Core.w.v[Core.w.i++] = *v;
-        }
-        compute_deeper_value(&g->g[1], v);
-        if (v->t != VALUE_MATRIX) {
-            Core.w.n++;
-            Core.w.v = reallocarray(Core.w.v, Core.w.n * Core.w.m, sizeof(*Core.w.v));
-            Core.w.v[Core.w.i++] = *v;
-        }
-        v->t = VALUE_MATRIX;
-        if (cw) {
-            v->v.m.v = Core.w.v;
-            v->v.m.m = Core.w.m;
-            v->v.m.n = Core.w.n;
-            Core.w.v = NULL;
-            Core.w.m = 0;
-            Core.w.n = 0;
-            Core.w.i = 0;
         }
         break;
     case GROUP_ROUND:

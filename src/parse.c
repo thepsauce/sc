@@ -18,21 +18,21 @@ struct parser Parser;
 
 int init_parser(void)
 {
-    if ((Parser.st[0] = new_group(1)) == NULL) {
+    if ((Core.st[0] = new_group(1)) == NULL) {
         return PARSER_ERROR;
     }
-    Parser.sp = 1;
+    Core.sp = 1;
     mpf_init(Parser.f);
     return PARSER_OK;
 }
 
 void reset_parser(void)
 {
-    clear_group(Parser.st[0]);
-    Parser.st[0]->t = GROUP_NULL;
-    Parser.st[0]->g = NULL;
-    Parser.st[0]->n = 0;
-    Parser.sp = 1;
+    clear_group(Core.st[0]);
+    Core.st[0]->t = GROUP_NULL;
+    Core.st[0]->g = NULL;
+    Core.st[0]->n = 0;
+    Core.sp = 1;
 }
 
 static void indicate_error(const char *msg, ...)
@@ -160,13 +160,13 @@ static const int Precedences[] = {
 
 struct group *walk_up_precedences(int p)
 {
-    while (Parser.sp > 1) {
-        if (Precedences[Parser.st[Parser.sp - 2]->t] < p) {
+    while (Core.sp > 1) {
+        if (Precedences[Core.st[Core.sp - 2]->t] < p) {
             break;
         }
-        Parser.sp--;
+        Core.sp--;
     }
-    return Parser.st[Parser.sp - 1];
+    return Core.st[Core.sp - 1];
 }
 
 int parse(const char *s)
@@ -268,7 +268,7 @@ int parse(const char *s)
 
     Parser.s = (char*) s;
     Parser.p = Parser.s;
-    g = Parser.st[Parser.sp - 1];
+    g = Core.st[Core.sp - 1];
 
 beg:
     skip_space();
@@ -281,10 +281,10 @@ beg:
             if (g == NULL) {
                 return PARSER_ERROR;
             }
-            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
                 return PARSER_ERROR;
             }
-            Parser.st[Parser.sp++] = g;
+            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
@@ -297,10 +297,10 @@ beg:
             if (g == NULL) {
                 return PARSER_ERROR;
             }
-            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
                 return PARSER_ERROR;
             }
-            Parser.st[Parser.sp++] = g;
+            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
@@ -350,12 +350,12 @@ infix:
         const size_t n = begins_with(matches[i].r);
         if (n > 0) {
             /* find matching left bracket */
-            int sp = Parser.sp;
+            int sp = Core.sp;
             if (Precedences[g->t] == 0) {
                 sp--;
             }
             while (sp > 0) {
-                if (Precedences[Parser.st[sp - 1]->t] == 0) {
+                if (Precedences[Core.st[sp - 1]->t] == 0) {
                     break;
                 }
                 sp--;
@@ -365,7 +365,7 @@ infix:
                         matches[i].r, matches[i].l);
                 return PARSER_ERROR;
             }
-            struct group *const left = Parser.st[sp - 1];
+            struct group *const left = Core.st[sp - 1];
             if (left->t != matches[i].t) {
                 if (matches[i].l == matches[i].r) {
                     goto beg;
@@ -375,7 +375,7 @@ infix:
             }
 
             Parser.p += n;
-            Parser.sp = sp;
+            Core.sp = sp;
             g = left;
             goto infix;
         }
@@ -390,10 +390,10 @@ infix:
             if (g == NULL) {
                 return PARSER_ERROR;
             }
-            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
                 return PARSER_ERROR;
             }
-            Parser.st[Parser.sp++] = g;
+            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
@@ -417,9 +417,9 @@ infix:
     if (g == NULL) {
         return PARSER_ERROR;
     }
-    if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+    if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
         return PARSER_ERROR;
     }
-    Parser.st[Parser.sp++] = g;
+    Core.st[Core.sp++] = g;
     goto beg;
 }
