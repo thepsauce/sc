@@ -7,6 +7,18 @@
 
 #include <math.h>
 
+/* * * Group * * */
+/* The life cycle of a group is:
+ * 0. The group is created (new_group())
+ * 1. The parser parses a string and generates groups (parse()).
+ * 2.1 The core evaluates this group (compute_value()).
+ * 2.2 Or the group is stored in a variable (compute_value() as well)
+ * 3.1 The group is destroyed after no longer needed (free_group()).
+ * 3.2 Or the address of the group is reused (clear_group()).
+ *
+ * Below are all types..
+ */
+
 enum group_type {
     GROUP_NULL,
 
@@ -75,22 +87,62 @@ enum group_type {
 };
 
 struct group {
+    /* type of this group */
     enum group_type t;
+    /* children of the group */
     struct group *g;
     size_t n;
     union {
+        /* GROUP_VARIABLE */
         char *w;
+        /* GROUP_NUMBER */
         mpf_t f;
     } v;
 };
 
+/*
+ * Uses calloc() to create a pointer to num groups.
+ * Use this to create a single group (group_new(1)) or
+ * the children of a group (group_new(n)).
+ */
 struct group *new_group(size_t num);
+
+/*
+ * Creates a deep copy of src and stores it into dest.
+ */
 int copy_group(struct group *dest, const struct group *src);
+
+/*
+ * Join the child group with the children of the parent group,
+ * the address of the child is freed, use join_group_no_free()
+ * to avoid this.
+ */
 struct group *join_group(struct group *parent, struct group *child);
+
+/*
+ * See above function..
+ */
 struct group *join_group_no_free(struct group *parent, struct group *child);
+
+/*
+ * Make the group a parent group with n children, the first child will be the
+ * group itself and the parent will have type type.
+ */
 struct group *surround_group(struct group *group, enum group_type type, size_t n);
+
+/*
+ * Cleared the memory used by a group, this does not free the group pointer.
+ */
 void clear_group(struct group *group);
+
+/*
+ * Same as clear_group() but it also uses free(group).
+ */
 void free_group(struct group *group);
+
+/*
+ * Output this group to stdout (use 0 for color)
+ */
 void output_group(struct group *group, int color);
 
 #endif
