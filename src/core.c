@@ -14,7 +14,6 @@ void throw_error(const char *fmt, ...)
     vfprintf(stderr, fmt, l);
     va_end(l);
     fputc('\n', stderr);
-    longjmp(Core.jb, 0);
 }
 
 struct variable *get_variable(const struct group *g)

@@ -181,9 +181,8 @@ int compute_value(const struct group *g, struct value *v)
 {
     struct variable *var;
 
-    if (setjmp(Core.jb) != 0) {
-        return -1;
-    }
+    /* TODO: turn this into a non recursive function for more control */
+
     switch (g->t) {
     case GROUP_EQUAL:
         var = get_variable(g->g);
