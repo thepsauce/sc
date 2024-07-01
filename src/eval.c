@@ -112,6 +112,18 @@ beg:
             throw_error("variable '%s' does not exist", g->v.w);
         }
         break;
+    case GROUP_DOUBLE_CORNER:
+        if (g->g[0].t == GROUP_COMMA) {
+            struct value values[2];
+            for (size_t i = 0; i < g->n; i++) {
+                compute_deeper_value(&g->g[i], &values[i]);
+            }
+            vector_dot_product(v, values);
+            for (size_t i = 0; i < g->n; i++) {
+                clear_value(&values[i]);
+            }
+        }
+        break;
     case GROUP_COMMA:
         if (Core.w.m == 0) {
             Core.w.m = 1;

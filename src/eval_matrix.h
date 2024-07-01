@@ -131,7 +131,7 @@ void matrix_multiply_matrix(struct value *v, struct value *values)
     v->v.m = dest;
 }
 
-void vector_dot_product(struct value *v, struct values *values)
+void vector_dot_product(struct value *v, struct value *values)
 {
     struct matrix *v1, *v2;
     size_t n1, n2;
@@ -156,7 +156,7 @@ void vector_dot_product(struct value *v, struct values *values)
     }
 
     struct value sum, ss;
-    struct values vs[2];
+    struct value vs[2];
     for (size_t i = 0; i < n1; i++) {
         vs[0] = v1->v[i];
         vs[1] = v2->v[i];
@@ -169,4 +169,5 @@ void vector_dot_product(struct value *v, struct values *values)
             operate(&sum, vs, 2, GROUP_PLUS);
         }
     }
+    *v = sum;
 }

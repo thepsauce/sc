@@ -343,35 +343,9 @@ infix:
         return PARSER_OK;
     }
 
-    for (size_t i = 0; i < ARRAY_SIZE(infixes); i++) {
-        const size_t n = begins_with(infixes[i].s);
-        if (n > 0) {
-            g = walk_up_precedences(Precedences[infixes[i].t]);
-            Parser.p += n;
-            g = surround_group(g, infixes[i].t, 2);
-            if (g == NULL) {
-                return PARSER_ERROR;
-            }
-            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
-                return PARSER_ERROR;
-            }
-            Parser.st[Parser.sp++] = g;
-            goto beg;
-        }
-    }
-
-    for (size_t i = 0; i < ARRAY_SIZE(suffixes); i++) {
-        const size_t n = begins_with(suffixes[i].s);
-        if (n > 0) {
-            g = walk_up_precedences(Precedences[suffixes[i].t]);
-            Parser.p += n;
-            if (surround_group(g, suffixes[i].t, 1) == NULL) {
-                return PARSER_ERROR;
-            }
-            goto infix;
-        }
-    }
-
+    /* this must come before infixes because otherwise
+     * a closing >> is intepreted as > (greater)
+     */
     for (size_t i = 0; i < ARRAY_SIZE(matches); i++) {
         const size_t n = begins_with(matches[i].r);
         if (n > 0) {
@@ -403,6 +377,35 @@ infix:
             Parser.p += n;
             Parser.sp = sp;
             g = left;
+            goto infix;
+        }
+    }
+
+    for (size_t i = 0; i < ARRAY_SIZE(infixes); i++) {
+        const size_t n = begins_with(infixes[i].s);
+        if (n > 0) {
+            g = walk_up_precedences(Precedences[infixes[i].t]);
+            Parser.p += n;
+            g = surround_group(g, infixes[i].t, 2);
+            if (g == NULL) {
+                return PARSER_ERROR;
+            }
+            if (Parser.sp + 1 >= (int) ARRAY_SIZE(Parser.st)) {
+                return PARSER_ERROR;
+            }
+            Parser.st[Parser.sp++] = g;
+            goto beg;
+        }
+    }
+
+    for (size_t i = 0; i < ARRAY_SIZE(suffixes); i++) {
+        const size_t n = begins_with(suffixes[i].s);
+        if (n > 0) {
+            g = walk_up_precedences(Precedences[suffixes[i].t]);
+            Parser.p += n;
+            if (surround_group(g, suffixes[i].t, 1) == NULL) {
+                return PARSER_ERROR;
+            }
             goto infix;
         }
     }
