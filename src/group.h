@@ -2,7 +2,10 @@
 #define GROUP_H
 
 #include <stdio.h>
-#include <gmp.h>
+
+#include <mpfr.h>
+
+#include <math.h>
 
 enum group_type {
     GROUP_NULL,
