@@ -24,13 +24,13 @@ int main(void)
             reset_parser();
             break;
         case PARSER_OK:
-            output_group(Parser.st[0], 0);
+            output_group(&Parser.root, 0);
             printf("\n");
             reset_parser();
             printf(">>> ");
             break;
         case PARSER_CONTINUE:
-            if (Parser.st[0]->t == GROUP_NULL) {
+            if (Parser.root.t == GROUP_NULL) {
                 printf(">>> ");
                 continue;
             }

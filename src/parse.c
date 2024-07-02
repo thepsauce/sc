@@ -18,21 +18,14 @@ struct parser Parser;
 
 int init_parser(void)
 {
-    if ((Core.st[0] = new_group(1)) == NULL) {
-        return PARSER_ERROR;
-    }
-    Core.sp = 1;
     mpf_init(Parser.f);
     return PARSER_OK;
 }
 
 void reset_parser(void)
 {
-    clear_group(Core.st[0]);
-    Core.st[0]->t = GROUP_NULL;
-    Core.st[0]->g = NULL;
-    Core.st[0]->n = 0;
-    Core.sp = 1;
+    clear_group(&Parser.root);
+    memset(&Parser.root, 0, sizeof(Parser.root));
 }
 
 static void indicate_error(const char *msg, ...)
@@ -158,15 +151,14 @@ static const int Precedences[] = {
     [GROUP_NUMBER] = INT_MAX,
 };
 
-struct group *walk_up_precedences(int p)
+static void walk_up_precedences(int p)
 {
-    while (Core.sp > 1) {
-        if (Precedences[Core.st[Core.sp - 2]->t] < p) {
+    while (Parser.cur->p != NULL) {
+        if (Precedences[Parser.cur->p->t] < p) {
             break;
         }
-        Core.sp--;
+        Parser.cur = Parser.cur->p;
     }
-    return Core.st[Core.sp - 1];
 }
 
 int parse(const char *s)
@@ -264,11 +256,10 @@ int parse(const char *s)
         { "⌊", "⌋", GROUP_FLOOR },
     };
 
-    struct group *g;
-
     Parser.s = (char*) s;
     Parser.p = Parser.s;
-    g = Core.st[Core.sp - 1];
+
+    Parser.cur = &Parser.root;
 
 beg:
     skip_space();
@@ -277,14 +268,10 @@ beg:
         const size_t n = begins_with(prefixes[i].s);
         if (n > 0) {
             Parser.p += n;
-            g = surround_group(g, prefixes[i].t, 1);
-            if (g == NULL) {
+            Parser.cur = surround_group(Parser.cur, prefixes[i].t, 1);
+            if (Parser.cur == NULL) {
                 return PARSER_ERROR;
             }
-            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
-                return PARSER_ERROR;
-            }
-            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
@@ -293,32 +280,28 @@ beg:
         const size_t n = begins_with(matches[i].l);
         if (n > 0) {
             Parser.p += n;
-            g = surround_group(g, matches[i].t, 1);
-            if (g == NULL) {
+            Parser.cur = surround_group(Parser.cur, matches[i].t, 1);
+            if (Parser.cur == NULL) {
                 return PARSER_ERROR;
             }
-            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
-                return PARSER_ERROR;
-            }
-            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
 
     if (isalpha(Parser.p[0])) {
         read_word();
-        g->t = GROUP_VARIABLE;
-        g->v.w = dict_putl(Parser.w, Parser.n);
-        if (g->v.w == NULL) {
+        Parser.cur->t = GROUP_VARIABLE;
+        Parser.cur->v.w = dict_putl(Parser.w, Parser.n);
+        if (Parser.cur->v.w == NULL) {
             indicate_error("%s", strerror(errno));
             return PARSER_ERROR;
         }
     } else if (isdigit(Parser.p[0]) || Parser.p[0] == '.') {
         read_number();
-        g->t = GROUP_NUMBER;
-        mpf_init_set(g->v.f, Parser.f);
+        Parser.cur->t = GROUP_NUMBER;
+        mpf_init_set(Parser.cur->v.f, Parser.f);
     } else if (Parser.p[0] != '\0') {
-        g->t = GROUP_VARIABLE;
+        Parser.cur->t = GROUP_VARIABLE;
         Parser.w = Parser.p;
         if (!(Parser.p[0] & 0x80)) {
             Parser.p++;
@@ -328,8 +311,8 @@ beg:
             }
         }
         Parser.n = Parser.p - Parser.w;
-        g->v.w = dict_putl(Parser.w, Parser.n);
-        if (g->v.w == NULL) {
+        Parser.cur->v.w = dict_putl(Parser.w, Parser.n);
+        if (Parser.cur->v.w == NULL) {
             indicate_error("%s", strerror(errno));
             return PARSER_ERROR;
         }
@@ -350,23 +333,22 @@ infix:
         const size_t n = begins_with(matches[i].r);
         if (n > 0) {
             /* find matching left bracket */
-            int sp = Core.sp;
+            struct group *g = Parser.cur;
             if (Precedences[g->t] == 0) {
-                sp--;
+                g = g->p;
             }
-            while (sp > 0) {
-                if (Precedences[Core.st[sp - 1]->t] == 0) {
+            while (g != NULL) {
+                if (Precedences[g->t] == 0) {
                     break;
                 }
-                sp--;
+                g = g->p;
             }
-            if (sp == 0) {
+            if (g == NULL) {
                 indicate_error("not open: '%s' needs matching '%s'",
                         matches[i].r, matches[i].l);
                 return PARSER_ERROR;
             }
-            struct group *const left = Core.st[sp - 1];
-            if (left->t != matches[i].t) {
+            if (g->t != matches[i].t) {
                 if (matches[i].l == matches[i].r) {
                     goto beg;
                 }
@@ -375,8 +357,7 @@ infix:
             }
 
             Parser.p += n;
-            Core.sp = sp;
-            g = left;
+            Parser.cur = g;
             goto infix;
         }
     }
@@ -384,16 +365,12 @@ infix:
     for (size_t i = 0; i < ARRAY_SIZE(infixes); i++) {
         const size_t n = begins_with(infixes[i].s);
         if (n > 0) {
-            g = walk_up_precedences(Precedences[infixes[i].t]);
             Parser.p += n;
-            g = surround_group(g, infixes[i].t, 2);
-            if (g == NULL) {
+            walk_up_precedences(Precedences[infixes[i].t]);
+            Parser.cur = surround_group(Parser.cur, infixes[i].t, 2);
+            if (Parser.cur == NULL) {
                 return PARSER_ERROR;
             }
-            if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
-                return PARSER_ERROR;
-            }
-            Core.st[Core.sp++] = g;
             goto beg;
         }
     }
@@ -401,9 +378,9 @@ infix:
     for (size_t i = 0; i < ARRAY_SIZE(suffixes); i++) {
         const size_t n = begins_with(suffixes[i].s);
         if (n > 0) {
-            g = walk_up_precedences(Precedences[suffixes[i].t]);
+            walk_up_precedences(Precedences[suffixes[i].t]);
             Parser.p += n;
-            if (surround_group(g, suffixes[i].t, 1) == NULL) {
+            if (surround_group(Parser.cur, suffixes[i].t, 1) == NULL) {
                 return PARSER_ERROR;
             }
             goto infix;
@@ -412,14 +389,10 @@ infix:
 
     /* implicit operator */
     /* for example: 2a, 2 2, a bc */
-    g = walk_up_precedences(Precedences[GROUP_IMPLICIT]);
-    g = surround_group(g, GROUP_IMPLICIT, 2);
-    if (g == NULL) {
+    walk_up_precedences(Precedences[GROUP_IMPLICIT]);
+    Parser.cur = surround_group(Parser.cur, GROUP_IMPLICIT, 2);
+    if (Parser.cur == NULL) {
         return PARSER_ERROR;
     }
-    if (Core.sp + 1 >= (int) ARRAY_SIZE(Core.st)) {
-        return PARSER_ERROR;
-    }
-    Core.st[Core.sp++] = g;
     goto beg;
 }

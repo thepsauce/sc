@@ -92,6 +92,8 @@ struct group {
     /* children of the group */
     struct group *g;
     size_t n;
+    /* parent of the group */
+    struct group *p;
     union {
         /* GROUP_VARIABLE */
         char *w;

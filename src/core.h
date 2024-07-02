@@ -58,19 +58,12 @@ extern struct core {
     /* all variables */
     struct variable *v;
     size_t nv;
-
-    /* stack, this is also used by the parser */
-    struct group *st[1024];
-    /* stack pointer */
-    int sp;
 } Core;
 
 /*
  * Computes the value of the group.
- *
- * Warning: Overwrites the parser stack (Parser.st, Parser.sp).
  */
-int compute_value(const struct group *group, struct value *value);
+int compute_value(/* const */ struct group *group, struct value *value);
 
 /*
  * Frees resources associated with this value.

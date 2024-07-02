@@ -4,22 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-void noop(struct value *v, struct value *values)
+int noop(struct value *v, struct value *values)
 {
     (void) v;
     (void) values;
     /* does nothing */
+    return 0;
 }
 
-static void operate(struct value *v, struct value *values, size_t n, enum group_type opr);
+static int operate(struct value *v, struct value *values, size_t n, enum group_type opr);
 
 #include "eval_number.h"
 #include "eval_bool.h"
 #include "eval_matrix.h"
 
-static void operate(struct value *v, struct value *values, size_t n, enum group_type opr)
+static int operate(struct value *v, struct value *values, size_t n, enum group_type opr)
 {
-    static void (*single_operators[GROUP_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
+    static int (*single_operators[GROUP_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
         [GROUP_POSITIVE][VALUE_NUMBER] = noop,
         [GROUP_POSITIVE][VALUE_MATRIX] = noop,
 
@@ -27,7 +28,7 @@ static void operate(struct value *v, struct value *values, size_t n, enum group_
         [GROUP_NOT][VALUE_NUMBER] = bool_not,
     };
 
-    static void (*double_operators[GROUP_MAX][VALUE_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
+    static int (*double_operators[GROUP_MAX][VALUE_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
         [GROUP_PLUS][VALUE_NUMBER][VALUE_NUMBER] = number_plus_number,
         [GROUP_MINUS][VALUE_NUMBER][VALUE_NUMBER] = number_minus_number,
         [GROUP_MULTIPLY][VALUE_NUMBER][VALUE_NUMBER] = number_multiply_number,
@@ -53,7 +54,7 @@ static void operate(struct value *v, struct value *values, size_t n, enum group_
         [GROUP_NOT_EQUAL][VALUE_NUMBER][VALUE_NUMBER] = number_not_equal_number,
     };
 
-    void (*op)(struct value *v, struct value *vs);
+    int (*op)(struct value *v, struct value *vs);
 
     switch (n) {
     case 1:
@@ -68,8 +69,9 @@ static void operate(struct value *v, struct value *values, size_t n, enum group_
 
     if (op == NULL) {
         throw_error("operator not defined");
+        return -1;
     }
-    (*op)(v, values);
+    return (*op)(v, values);
 }
 
 void clear_value(struct value *v)
@@ -94,85 +96,40 @@ void clear_value(struct value *v)
     }
 }
 
-void compute_deeper_value(const struct group *g, struct value *v)
+int compute_value(struct group *g, struct value *v)
 {
-    struct variable *var;
+    struct value vs[2];
+    struct value *c;
 
-beg:
-    switch (g->t) {
-    case GROUP_NUMBER:
-        v->t = VALUE_NUMBER;
-        mpf_init_set(v->v.f, g->v.f);
-        break;
-    case GROUP_VARIABLE:
-    case GROUP_LOWER:
-        var = get_variable(g);
-        if (var == NULL) {
-            throw_error("variable '%s' does not exist", g->v.w);
-        }
-        break;
-    case GROUP_DOUBLE_CORNER:
-        if (g->g[0].t == GROUP_COMMA) {
-            struct value values[2];
-            for (size_t i = 0; i < g->n; i++) {
-                compute_deeper_value(&g->g[i], &values[i]);
-            }
-            vector_dot_product(v, values);
-            for (size_t i = 0; i < g->n; i++) {
-                clear_value(&values[i]);
-            }
-        }
-        break;
-    case GROUP_ROUND:
-        switch (g->g[0].t) {
-        case GROUP_SEMICOLON:
-            compute_deeper_value(&g->g[0].g[0], v);
+    while (1) {
+        switch (g->t) {
+        case GROUP_NUMBER:
+            c = g->p == NULL ? &vs[0] : &vs[g - g->p->g];
+            c->t = VALUE_NUMBER;
+            mpf_init_set(c->v.f, g->v.f);
             break;
-        default:
-            g = &g->g[0];
-            goto beg;
-        }
-        break;
-    default: {
-        struct value values[g->n];
-        for (size_t i = 0; i < g->n; i++) {
-            compute_deeper_value(&g->g[i], &values[i]);
-        }
-        operate(v, values, g->n, g->t);
-        for (size_t i = 0; i < g->n; i++) {
-            clear_value(&values[i]);
-        }
-    }
-    }
-}
-
-int compute_value(const struct group *g, struct value *v)
-{
-    struct variable *var;
-
-    /* TODO: turn this into a non recursive function for more control */
-
-    switch (g->t) {
-    case GROUP_EQUAL:
-        var = get_variable(g->g);
-        if (g->g->t == GROUP_IMPLICIT) {
-            /* function declaration */
-            break;
-        }
-        if (g->g->t == GROUP_VARIABLE) {
-            if (var == NULL) {
-                add_variable(&g->g[0], &g->g[1]);
-            } else {
-                copy_group(&var->value, &g->g[1]);
+        default /* some operator */:
+            g = g->g;
+            if (g->t != GROUP_NUMBER) {
+                throw_error("disabled temporarily: no deep expressions");
+                return -1;
             }
-            compute_deeper_value(&g->g[1], v);
-            break;
+            continue;
         }
-    /* fall through */
-    default:
-        compute_deeper_value(g, v);
+        while (g->p == NULL || g + 1 == g->p->g + g->p->n) {
+            if (g->p == NULL) {
+                *v = vs[0];
+                return 0;
+            }
+            if (operate(v, vs, g->p->n, g->p->t) == -1) {
+                return -1;
+            }
+            vs[0] = *v;
+            g = g->p;
+        }
+        g++;
     }
-    return 0;
+    /* this point is never reached */
 }
 
 void output_value(struct value *v)

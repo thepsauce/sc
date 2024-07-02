@@ -38,6 +38,7 @@ int copy_group(struct group *dest, const struct group *src)
                 free(dest->g);
                 return -1;
             }
+            dest->g[i].p = dest;
         }
     }
     return 0;
@@ -45,6 +46,7 @@ int copy_group(struct group *dest, const struct group *src)
 
 struct group *join_group(struct group *p, struct group *c)
 {
+    c->p = p;
     join_group_no_free(p, c);
     free(c);
     return p;
@@ -59,6 +61,7 @@ struct group *join_group_no_free(struct group *p, struct group *c)
         return NULL;
     }
     p->g = g;
+    c->p = p;
     g[p->n++] = *c;
     return p;
 }
@@ -75,6 +78,9 @@ struct group *surround_group(struct group *c, enum group_type t, size_t n)
     c->t = t;
     c->g = g;
     c->n = n;
+    for (size_t i = 0; i < n; i++) {
+        g[i].p = c;
+    }
     return &g[n - 1];
 }
 

@@ -14,6 +14,11 @@ extern struct parser {
     /* read_number (overwrites n as well) */
     mpf_t f;
     int n;
+
+    /* root group */
+    struct group root;
+    /* deepest group, needed for continuing parser (PARSER_CONTINUE) */
+    struct group *cur;
 } Parser;
 
 #define PARSER_ERROR (-1)
@@ -32,7 +37,7 @@ int init_parser(void);
 void reset_parser(void);
 
 /*
- * Parse given string, the resulting group will be stored in Parser.st[0].
+ * Parse given string, the resulting group will be stored in g.
  *
  * This returns PARSER_ERROR when the syntax of the string is invalid or
  * PARSER_CONTINUE when the parser could continue if only it had more input

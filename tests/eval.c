@@ -50,8 +50,8 @@ int main(void)
             prompt = ">>> ";
             break;
         case PARSER_OK:
-            if (compute_value(Core.st[0], &v) == 0) {
-                output_group(Core.st[0], 0);
+            if (compute_value(&Parser.root, &v) == 0) {
+                output_group(&Parser.root, 0);
                 printf(" = ");
                 output_value(&v);
                 clear_value(&v);
