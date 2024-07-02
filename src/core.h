@@ -9,11 +9,11 @@
 /* * * Value * * */
 
 /*
- * Values are computed groups that store data depending on
- * which type (enum value_type) they are, see below for
- * the available types.
+ * Values are computed groups that store data depending on which
+ * type (enum value_type) they are, see below for the available types.
  */
 enum value_type {
+    VALUE_NULL,
     VALUE_BOOL,
     VALUE_NUMBER,
     /* VALUE_VECTOR, (matrix of size 1 x n) */

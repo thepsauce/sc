@@ -178,6 +178,9 @@ int compute_value(const struct group *g, struct value *v)
 void output_value(struct value *v)
 {
     switch (v->t) {
+    case VALUE_NULL:
+        /* nothing, but problem.. */
+        break;
     case VALUE_BOOL:
         printf("%s", v->v.b ? "true" : "false");
         break;
@@ -203,10 +206,13 @@ void output_value(struct value *v)
         }
         break;
     case VALUE_SET:
+        /* TODO: */
         break;
     case VALUE_RANGE:
+        /* TODO: */
         break;
-    default:
+    case VALUE_MAX:
+        /* nothing */
         break;
     }
 }
