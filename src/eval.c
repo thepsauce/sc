@@ -141,63 +141,143 @@ void clear_value(struct value *v)
     }
 }
 
-/* TODO: consider making this recursive again */
-int compute_value(struct group *g, struct value *v)
+static int compute_deep_value(struct group *g, struct value *v)
 {
-    struct value r[128]; /* TODO: what size should this be, dynamic? */
-    int nr = 0;
     struct variable *var;
 
-    while (1) {
-        switch (g->t) {
-        case GROUP_NUMBER:
-            r[nr].t = VALUE_NUMBER;
-            mpf_init_set(r[nr].v.f, g->v.f);
-            nr++;
-            break;
-        case GROUP_VARIABLE:
-            var = get_variable(g);
-            if (var == NULL) {
-                throw_error("variable does not exist");
-                return -1;
-            }
-            compute_value(&var->value, &r[nr++]);
-            break;
-        case GROUP_EQUAL:
-            if (nr == 0) {
-                if (g->g[0].t == GROUP_VARIABLE) {
-                    var = get_variable(&g->g[0]);
-                    if (var == NULL) {
-                        add_variable(&g->g[0], &g->g[1]);
-                    } else {
-                        clear_group(&var->value);
-                        copy_group(&var->value, &g->g[1]);
-                    }
-                    break;
-                }
-            }
-            /* fall through */
-        default /* some operator */:
-            g = g->g;
-            continue;
+    switch (g->t) {
+    case GROUP_NUMBER:
+        v->t = VALUE_NUMBER;
+        mpf_init_set(v->v.f, g->v.f);
+        return 0;
+
+    case GROUP_VARIABLE:
+        var = get_variable(g->v.w, 0);
+        if (var == NULL) {
+            throw_error("variable does not exist");
+            return -1;
         }
-        while (g->p == NULL || g + 1 == g->p->g + g->p->n) {
-            if (g->p == NULL) {
-                *v = r[0];
-                return 0;
-            }
-            if (operate(v, &r[nr - g->p->n], g->p->n, g->p->t) == -1) {
-                return -1;
-            }
-            for (size_t i = 0; i < g->p->n; i++) {
-                clear_value(&r[--nr]);
-            }
-            r[nr++] = *v;
-            g = g->p;
+        return compute_deep_value(&var->value, v);
+
+    case GROUP_IMPLICIT:
+        if (g->g[0].t == GROUP_VARIABLE) {
+            /* TODO: */
         }
-        g++;
+        return 0;
+
+    default:
+        break;
     }
-    /* this point is never reached */
+
+    struct value values[g->n];
+    for (size_t i = 0; i < g->n; i++) {
+        if (compute_deep_value(&g->g[i], &values[i]) == -1) {
+            while (i > 0) {
+                clear_value(&values[--i]);
+            }
+            return -1;
+        }
+    }
+    const int err = operate(v, values, g->n, g->t);
+    for (size_t i = 0; i < g->n; i++) {
+        clear_value(&values[i]);
+    }
+    return err;
+}
+
+static inline int handle_implicit_declare(struct group *equ)
+{
+    char **d, **dep = NULL;
+    size_t ndep = 0;
+    struct group *var, *impl, *c;
+
+    var = &equ->g[0].g[0];
+    if (var->t != GROUP_VARIABLE) {
+        return 1;
+    }
+
+    impl = &equ->g[0].g[1];
+    switch (impl->t) {
+    case GROUP_VARIABLE:
+        /* function depending on a single variable */
+        add_variable(var->v.w, &equ->g[1], &impl->v.w, 1);
+        break;
+
+    case GROUP_ROUND:
+        /* function depending on any amount of variables */
+        c = impl->g;
+        while (c->t == GROUP_COMMA) {
+            if (c->g[1].t != GROUP_VARIABLE) {
+                free(dep);
+                return 1;
+            }
+            d = reallocarray(dep, ndep + 1, sizeof(*d));
+            if (d == NULL) {
+                free(dep);
+                throw_error("%s", strerror(errno));
+                return -1;
+            }
+            dep = d;
+            dep[ndep++] = c->v.w;
+            c = c->g;
+        }
+        if (c->t != GROUP_VARIABLE) {
+            free(dep);
+            return 1;
+        }
+        d = reallocarray(dep, ndep + 1, sizeof(*d));
+        if (d == NULL) {
+            throw_error("%s", strerror(errno));
+            return -1;
+        }
+        dep = d;
+        dep[ndep++] = c->v.w;
+        add_variable(var->v.w, &equ->g[1], dep, ndep);
+        free(dep);
+        break;
+
+    default:
+        return 1;
+    }
+    return 0;
+}
+
+int compute_value(struct group *g, struct value *v)
+{
+    struct variable *var;
+
+    switch (g->t) {
+    case GROUP_EQUAL:
+        switch (g->g[0].t) {
+        case GROUP_VARIABLE:
+            var = get_variable(g->g[0].v.w, 0);
+            if (var == NULL) {
+                add_variable(g->g[0].v.w, &g->g[1], NULL, 0);
+            } else {
+                clear_group(&var->value);
+                copy_group(&var->value, &g->g[1]);
+            }
+            return 0;
+
+        case GROUP_IMPLICIT:
+            switch (handle_implicit_declare(g)) {
+            case -1:
+                return -1;
+            case 0:
+                return 0;
+            case 1:
+                break;
+            }
+
+        default:
+            break;
+        }
+        break;
+
+    default:
+        break;
+    }
+    return compute_deep_value(g, v);
 }
 
 void output_value(struct value *v)
@@ -206,12 +286,15 @@ void output_value(struct value *v)
     case VALUE_NULL:
         /* nothing, but problem.. */
         break;
+
     case VALUE_BOOL:
         printf("%s", v->v.b ? "true" : "false");
         break;
+
     case VALUE_NUMBER:
         mpf_out_str(stdout, 10, 0, v->v.f);
         break;
+
     case VALUE_MATRIX:
         if (v->v.m.m == 1) {
             printf("( ");
@@ -231,12 +314,15 @@ void output_value(struct value *v)
             }
         }
         break;
+
     case VALUE_SET:
         /* TODO: */
         break;
+
     case VALUE_RANGE:
         /* TODO: */
         break;
+
     case VALUE_MAX:
         /* nothing */
         break;
