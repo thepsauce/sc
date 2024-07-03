@@ -46,16 +46,20 @@ struct value {
 };
 
 struct variable {
-    /* the name can be of type GROUP_VARIABLE, GROUP_LOWER or GROUP_IMPLICIT */
-    struct group name;
+    char *name;
     struct group value;
+    /* dependencies */
+    char **dep;
+    size_t ndep;
 };
 
 /* * * Core * * */
 
 extern struct core {
-    /* all variables */
-    struct variable *v;
+    /* all variables (this needs to be a double pointer,
+     * so the address of value does not change (messes up the children))
+     */
+    struct variable **v;
     size_t nv;
 } Core;
 
@@ -65,7 +69,7 @@ extern struct core {
 int compute_value(/* const */ struct group *group, struct value *value);
 
 /*
- * Copies src into dest, allocates new memory so they are independent
+ * Copies src into dest, allocates new memory so they are independent.
  */
 int copy_value(struct value *dest, const struct value *src);
 
@@ -80,17 +84,23 @@ void clear_value(struct value *value);
 void output_value(struct value *value);
 
 /*
- * Use a group (see above for possible types) to get the variable.
+ * Get a variable by name, also with number of arguments to allow for example:
+ * f(x) = x
+ * f(x, y) = x + y
+ *
  * This function can be used to set a variable or to get its values.
+ *
+ * Note: The name must be contained in the dictionary (added with dict_put).
  */
-struct variable *get_variable(const struct group *name);
+struct variable *get_variable(const char *name, size_t ndep);
 
 /*
  * Simply adds the named value to the variable list.
  *
- * Note: This does not check if the variable exists already
+ * Note: This does not check if the variable exists already. The name must
+ * be contained in the dictionary.
  */
-int add_variable(const struct group *name, const struct group *val);
+int add_variable(char *name, const struct group *val, char *const *dep, size_t ndep);
 
 /*
  * Print the error to stderr.

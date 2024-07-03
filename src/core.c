@@ -16,49 +16,49 @@ void throw_error(const char *fmt, ...)
     fputc('\n', stderr);
 }
 
-struct variable *get_variable(const struct group *g)
+struct variable *get_variable(const char *name, size_t ndep)
 {
     for (size_t i = Core.nv; i > 0; ) {
-        struct variable *const v = &Core.v[--i];
-        if (g->t == v->name.t) {
-            switch (g->t) {
-            case GROUP_VARIABLE:
-                if (g->v.w == v->name.v.w) {
-                    return v;
-                }
-                break;
-            case GROUP_LOWER:
-            case GROUP_IMPLICIT:
-            default:
-                throw_error("not implemented: lower and implicit variables");
-                break;
-            }
+        struct variable *const v = Core.v[--i];
+        if (v->ndep == ndep && name == v->name) {
+            return v;
         }
     }
     return NULL;
 }
 
-int add_variable(const struct group *name, const struct group *val)
+int add_variable(char *name, const struct group *val, char *const *dep, size_t ndep)
 {
-    struct variable *v;
+    struct variable **v, *var;
 
     v = reallocarray(Core.v, Core.nv + 1, sizeof(*Core.v));
     if (v == NULL) {
         goto err;
     }
     Core.v = v;
-    v = &Core.v[Core.nv];
-    if (copy_group(&v->name, name) == -1) {
+    var = malloc(sizeof(*var));
+    if (var == NULL) {
         goto err;
     }
-    if (copy_group(&v->value, val) == -1) {
-        clear_group(&v->name);
+    Core.v[Core.nv] = var;
+    var->dep = reallocarray(NULL, ndep, sizeof(*var->dep));
+    if (var->dep == NULL) {
         goto err;
     }
+    for (size_t i = 0; i < ndep; i++) {
+        var->dep[i] = dep[i];
+    }
+    if (copy_group(&var->value, val) == -1) {
+        free(var->dep);
+        free(var);
+        goto err;
+    }
+    var->name = name;
+    var->ndep = ndep;
     Core.nv++;
     return 0;
 
 err:
-    throw_error("could not allocate variable: %s", strerror(errno));
+    throw_error("%s", strerror(errno));
     return -1;
 }
