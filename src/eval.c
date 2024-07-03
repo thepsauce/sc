@@ -33,6 +33,13 @@ static int operate(struct value *v, struct value *values, size_t n, enum group_t
     };
 
     static int (*double_operators[GROUP_MAX][VALUE_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
+        [GROUP_COMMA][VALUE_NUMBER][VALUE_NUMBER] = number_comma_number,
+        [GROUP_COMMA][VALUE_NUMBER][VALUE_MATRIX] = number_comma_matrix,
+        [GROUP_COMMA][VALUE_MATRIX][VALUE_NUMBER] = matrix_comma_number,
+        [GROUP_COMMA][VALUE_MATRIX][VALUE_MATRIX] = matrix_comma_matrix,
+
+        [GROUP_SEMICOLON][VALUE_MATRIX][VALUE_MATRIX] = matrix_semicolon_matrix,
+
         [GROUP_PLUS][VALUE_NUMBER][VALUE_NUMBER] = number_plus_number,
         [GROUP_MINUS][VALUE_NUMBER][VALUE_NUMBER] = number_minus_number,
         [GROUP_MULTIPLY][VALUE_NUMBER][VALUE_NUMBER] = number_multiply_number,
@@ -134,10 +141,12 @@ void clear_value(struct value *v)
     }
 }
 
+/* TODO: consider making this recursive again */
 int compute_value(struct group *g, struct value *v)
 {
     struct value r[128]; /* TODO: what size should this be, dynamic? */
     int nr = 0;
+    struct variable *var;
 
     while (1) {
         switch (g->t) {
@@ -147,8 +156,27 @@ int compute_value(struct group *g, struct value *v)
             nr++;
             break;
         case GROUP_VARIABLE:
-            throw_error("no variables right now");
-            return -1;
+            var = get_variable(g);
+            if (var == NULL) {
+                throw_error("variable does not exist");
+                return -1;
+            }
+            compute_value(&var->value, &r[nr++]);
+            break;
+        case GROUP_EQUAL:
+            if (nr == 0) {
+                if (g->g[0].t == GROUP_VARIABLE) {
+                    var = get_variable(&g->g[0]);
+                    if (var == NULL) {
+                        add_variable(&g->g[0], &g->g[1]);
+                    } else {
+                        clear_group(&var->value);
+                        copy_group(&var->value, &g->g[1]);
+                    }
+                    break;
+                }
+            }
+            /* fall through */
         default /* some operator */:
             g = g->g;
             continue;
@@ -161,7 +189,9 @@ int compute_value(struct group *g, struct value *v)
             if (operate(v, &r[nr - g->p->n], g->p->n, g->p->t) == -1) {
                 return -1;
             }
-            nr -= g->p->n;
+            for (size_t i = 0; i < g->p->n; i++) {
+                clear_value(&r[--nr]);
+            }
             r[nr++] = *v;
             g = g->p;
         }
@@ -191,9 +221,10 @@ void output_value(struct value *v)
             }
             printf(")");
         } else {
-            for (size_t i = 0; i < v->v.m.n; i++) {
-                for (size_t j = 0; j < v->v.m.m; j++) {
-                    output_value(&v->v.m.v[i + j * v->v.m.n]);
+            printf("\n");
+            for (size_t i = 0; i < v->v.m.m; i++) {
+                for (size_t j = 0; j < v->v.m.n; j++) {
+                    output_value(&v->v.m.v[i * v->v.m.n + j]);
                     printf(" ");
                 }
                 printf("\n");

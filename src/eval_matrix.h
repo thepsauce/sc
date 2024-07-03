@@ -199,3 +199,138 @@ int vector_dot_product(struct value *v, struct value *values)
     *v = sum;
     return 0;
 }
+
+int number_comma_number(struct value *v, struct value *values)
+{
+    struct value *c;
+
+    c = reallocarray(NULL, 2, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        copy_value(&c[i], &values[i]);
+    }
+    v->t = VALUE_MATRIX;
+    v->v.m.m = 1;
+    v->v.m.n = 2;
+    v->v.m.v = c;
+    return 0;
+}
+
+int number_comma_matrix(struct value *v, struct value *values)
+{
+    struct matrix *const mat = &values[1].v.m;
+    struct value *c;
+
+    if (mat->m != 1) {
+        throw_error("can not combine a matrix with a number");
+        return -1;
+    }
+    c = reallocarray(NULL, mat->n + 1, sizeof(*mat->v));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < mat->n; i++) {
+        copy_value(&c[i + 1], &mat->v[i]);
+    }
+    copy_value(&c[0], &values[0]);
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = 1;
+    v->v.m.n = mat->n + 1;
+    v->v.m.v = c;
+    return 0;
+}
+
+int matrix_comma_number(struct value *v, struct value *values)
+{
+    struct matrix *const mat = &values[0].v.m;
+    struct value *c;
+
+    if (mat->m != 1) {
+        throw_error("can not combine a matrix with a number");
+        return -1;
+    }
+    c = reallocarray(NULL, mat->n + 1, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < mat->n; i++) {
+        copy_value(&c[i], &mat->v[i]);
+    }
+    copy_value(&c[mat->n], &values[1]);
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = 1;
+    v->v.m.n = mat->n + 1;
+    v->v.m.v = c;
+    return 0;
+}
+
+int matrix_comma_matrix(struct value *v, struct value *values)
+{
+    struct matrix *const m1 = &values[0].v.m;
+    struct matrix *const m2 = &values[1].v.m;
+    struct value *c;
+    if (m1->m != m2->m) {
+        throw_error("can not combine two matrices with different row count");
+        return -1;
+    }
+    const size_t m = m1->m;
+    const size_t n = m1->n + m2->n;
+    c = reallocarray(NULL, m * n, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < m; i++) {
+        for (size_t j = 0; j < m1->n; j++) {
+            copy_value(&c[i * n + j], &m1->v[i * m1->n + j]);
+        }
+        for (size_t j = 0; j < m2->n; j++) {
+            copy_value(&c[i * n + j + m1->n], &m2->v[i * m2->n + j]);
+        }
+    }
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = m;
+    v->v.m.n = n;
+    v->v.m.v = c;
+    return 0;
+}
+
+int matrix_semicolon_matrix(struct value *v, struct value *values)
+{
+    struct matrix *const m1 = &values[0].v.m;
+    struct matrix *const m2 = &values[1].v.m;
+    struct value *c;
+    if (m1->n != m2->n) {
+        throw_error("can not combine two matrices with different column count");
+        return -1;
+    }
+    const size_t m = m1->m + m2->m;
+    const size_t n = m1->n;
+    c = reallocarray(NULL, m * n, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < m1->m; j++) {
+            copy_value(&c[j * n + i], &m1->v[j * m1->n + i]);
+        }
+        for (size_t j = 0; j < m2->m; j++) {
+            copy_value(&c[(j + m1->m) * n + i], &m2->v[j * m2->n + i]);
+        }
+    }
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = m;
+    v->v.m.n = n;
+    v->v.m.v = c;
+    return 0;
+}
