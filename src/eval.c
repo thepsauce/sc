@@ -98,33 +98,33 @@ void clear_value(struct value *v)
 
 int compute_value(struct group *g, struct value *v)
 {
-    struct value vs[2];
-    struct value *c;
+    struct value r[128]; /* TODO: what size should this be, dynamic? */
+    int nr = 0;
 
     while (1) {
         switch (g->t) {
         case GROUP_NUMBER:
-            c = g->p == NULL ? &vs[0] : &vs[g - g->p->g];
-            c->t = VALUE_NUMBER;
-            mpf_init_set(c->v.f, g->v.f);
+            r[nr].t = VALUE_NUMBER;
+            mpf_init_set(r[nr].v.f, g->v.f);
+            nr++;
             break;
+        case GROUP_VARIABLE:
+            throw_error("no variables right now");
+            return -1;
         default /* some operator */:
             g = g->g;
-            if (g->t != GROUP_NUMBER) {
-                throw_error("disabled temporarily: no deep expressions");
-                return -1;
-            }
             continue;
         }
         while (g->p == NULL || g + 1 == g->p->g + g->p->n) {
             if (g->p == NULL) {
-                *v = vs[0];
+                *v = r[0];
                 return 0;
             }
-            if (operate(v, vs, g->p->n, g->p->t) == -1) {
+            if (operate(v, &r[nr - g->p->n], g->p->n, g->p->t) == -1) {
                 return -1;
             }
-            vs[0] = *v;
+            nr -= g->p->n;
+            r[nr++] = *v;
             g = g->p;
         }
         g++;
