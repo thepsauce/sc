@@ -81,8 +81,7 @@ void clear_value(struct value *v)
         mpf_clear(v->v.f);
         break;
     case VALUE_MATRIX:
-        for (size_t i = 0, n = v->v.m.m * v->v.m.n;
-                i < n; i++) {
+        for (size_t i = 0, n = v->v.m.m * v->v.m.n; i < n; i++) {
             clear_value(&v->v.m.v[i]);
         }
         free(v->v.m.v);
