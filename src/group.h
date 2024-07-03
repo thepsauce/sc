@@ -115,18 +115,6 @@ struct group *new_group(size_t num);
 int copy_group(struct group *dest, const struct group *src);
 
 /*
- * Join the child group with the children of the parent group,
- * the address of the child is freed, use join_group_no_free()
- * to avoid this.
- */
-struct group *join_group(struct group *parent, struct group *child);
-
-/*
- * See above function..
- */
-struct group *join_group_no_free(struct group *parent, struct group *child);
-
-/*
  * Make the group a parent group with n children, the first child will be the
  * group itself and the parent will have type type.
  */

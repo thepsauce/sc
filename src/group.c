@@ -44,44 +44,27 @@ int copy_group(struct group *dest, const struct group *src)
     return 0;
 }
 
-struct group *join_group(struct group *p, struct group *c)
+struct group *surround_group(struct group *g, enum group_type t, size_t n)
 {
-    c->p = p;
-    join_group_no_free(p, c);
-    free(c);
-    return p;
-}
+    struct group *c;
 
-struct group *join_group_no_free(struct group *p, struct group *c)
-{
-    struct group *g;
-
-    g = reallocarray(p->g, p->n + 1, sizeof(*p->g));
-    if (g == NULL) {
+    c = new_group(n);
+    if (c == NULL) {
         return NULL;
     }
-    p->g = g;
-    c->p = p;
-    g[p->n++] = *c;
-    return p;
-}
-
-struct group *surround_group(struct group *c, enum group_type t, size_t n)
-{
-    struct group *g;
-
-    g = new_group(n);
-    if (g == NULL) {
-        return NULL;
+    c[0] = *g;
+    /* reparent because the pointer changes */
+    for (size_t i = 0; i < g->n; i++) {
+        g->g[i].p = c;
     }
-    g[0] = *c;
-    c->t = t;
-    c->g = g;
-    c->n = n;
+    g->t = t;
+    g->g = c;
+    g->n = n;
+    /* initialize parent */
     for (size_t i = 0; i < n; i++) {
-        g[i].p = c;
+        c[i].p = g;
     }
-    return &g[n - 1];
+    return &c[n - 1];
 }
 
 void clear_group(struct group *g)
