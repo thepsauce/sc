@@ -65,6 +65,11 @@ extern struct core {
 int compute_value(/* const */ struct group *group, struct value *value);
 
 /*
+ * Copies src into dest, allocates new memory so they are independent
+ */
+int copy_value(struct value *dest, const struct value *src);
+
+/*
  * Frees resources associated with this value.
  */
 void clear_value(struct value *value);

@@ -4,11 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-int noop(struct value *v, struct value *values)
+static int pass_single(struct value *v, struct value *values)
 {
-    (void) v;
-    (void) values;
-    /* does nothing */
+    copy_value(v, &values[0]);
     return 0;
 }
 
@@ -21,11 +19,17 @@ static int operate(struct value *v, struct value *values, size_t n, enum group_t
 static int operate(struct value *v, struct value *values, size_t n, enum group_type opr)
 {
     static int (*single_operators[GROUP_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
-        [GROUP_POSITIVE][VALUE_NUMBER] = noop,
-        [GROUP_POSITIVE][VALUE_MATRIX] = noop,
+        [GROUP_POSITIVE][VALUE_NUMBER] = pass_single,
+        [GROUP_POSITIVE][VALUE_MATRIX] = pass_single,
 
         [GROUP_NEGATE][VALUE_NUMBER] = number_negate,
         [GROUP_NOT][VALUE_NUMBER] = bool_not,
+
+        [GROUP_ROUND][VALUE_BOOL] = pass_single,
+        [GROUP_ROUND][VALUE_NUMBER] = pass_single,
+        [GROUP_ROUND][VALUE_MATRIX] = pass_single,
+        [GROUP_ROUND][VALUE_SET] = pass_single,
+        [GROUP_ROUND][VALUE_RANGE] = pass_single,
     };
 
     static int (*double_operators[GROUP_MAX][VALUE_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
@@ -72,6 +76,41 @@ static int operate(struct value *v, struct value *values, size_t n, enum group_t
         return -1;
     }
     return (*op)(v, values);
+}
+
+int copy_value(struct value *dest, const struct value *src)
+{
+    dest->t = src->t;
+    switch (src->t) {
+    case VALUE_NULL:
+        return -1;
+    case VALUE_BOOL:
+        dest->v.b = src->v.b;
+        break;
+    case VALUE_NUMBER:
+        mpf_init_set(dest->v.f, src->v.f);
+        break;
+    case VALUE_MATRIX: {
+        const struct matrix *mat = &src->v.m;
+        const size_t n = mat->n * mat->m;
+        dest->v.m.v = reallocarray(NULL, n, sizeof(*mat->v));
+        for (size_t i = 0; i < n; i++) {
+            copy_value(&dest->v.m.v[i], &mat->v[i]);
+        }
+        dest->v.m.n = mat->n;
+        dest->v.m.m = mat->m;
+        break;
+    }
+    case VALUE_RANGE:
+        /* TODO: */
+        break;
+    case VALUE_SET:
+        /* TODO: */
+        break;
+    case VALUE_MAX:
+        return -1;
+    }
+    return 0;
 }
 
 void clear_value(struct value *v)
