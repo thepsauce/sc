@@ -25,13 +25,12 @@ enum value_type {
 
 struct value;
 
-struct vector {
-    struct value *v;
-    size_t n;
-};
-
 struct matrix {
+    /* data */
     struct value *v;
+    /* m: rows,
+     * n: columns
+     */
     size_t m, n;
 };
 
@@ -86,7 +85,7 @@ struct variable *get_variable(const struct group *name);
  *
  * Note: This does not check if the variable exists already
  */
-void add_variable(const struct group *name, const struct group *val);
+int add_variable(const struct group *name, const struct group *val);
 
 /*
  * Print the error to stderr.

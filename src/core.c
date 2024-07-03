@@ -38,7 +38,7 @@ struct variable *get_variable(const struct group *g)
     return NULL;
 }
 
-void add_variable(const struct group *name, const struct group *val)
+int add_variable(const struct group *name, const struct group *val)
 {
     struct variable *v;
 
@@ -56,8 +56,9 @@ void add_variable(const struct group *name, const struct group *val)
         goto err;
     }
     Core.nv++;
-    return;
+    return 0;
 
 err:
     throw_error("could not allocate variable: %s", strerror(errno));
+    return -1;
 }

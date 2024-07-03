@@ -17,6 +17,7 @@ struct group *new_group(size_t n)
 
 int copy_group(struct group *dest, const struct group *src)
 {
+    dest->p = NULL;
     dest->t = src->t;
     dest->v = src->v;
     switch (src->t) {
