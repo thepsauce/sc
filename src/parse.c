@@ -19,6 +19,7 @@ struct parser Parser;
 int init_parser(void)
 {
     mpf_init(Parser.f);
+    Parser.cur = &Parser.root;
     return PARSER_OK;
 }
 
@@ -26,6 +27,7 @@ void reset_parser(void)
 {
     clear_group(&Parser.root);
     memset(&Parser.root, 0, sizeof(Parser.root));
+    Parser.cur = &Parser.root;
 }
 
 static void indicate_error(const char *msg, ...)
@@ -259,8 +261,6 @@ int parse(const char *s)
     Parser.s = (char*) s;
     Parser.p = Parser.s;
 
-    Parser.cur = &Parser.root;
-
 beg:
     skip_space();
 
@@ -320,8 +320,9 @@ beg:
         return PARSER_CONTINUE;
     }
 
+    bool sp;
 infix:
-    skip_space();
+    sp = skip_space() > 0;
     if (Parser.p[0] == '\0') {
         return PARSER_OK;
     }
@@ -389,8 +390,12 @@ infix:
 
     /* implicit operator */
     /* for example: 2a, 2 2, a bc */
-    walk_up_precedences(Precedences[GROUP_IMPLICIT]);
-    Parser.cur = surround_group(Parser.cur, GROUP_IMPLICIT, 2);
+    /* if there is a space, for example in 2 2, then
+     * then it is seen as implicit comma, so `2, 2`
+     */
+    const enum group_type t = sp ? GROUP_COMMA : GROUP_IMPLICIT;
+    walk_up_precedences(Precedences[t]);
+    Parser.cur = surround_group(Parser.cur, t, 2);
     if (Parser.cur == NULL) {
         return PARSER_ERROR;
     }
