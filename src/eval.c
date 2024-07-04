@@ -33,11 +33,20 @@ static int operate(struct value *v, struct value *values, size_t n, enum group_t
     };
 
     static int (*double_operators[GROUP_MAX][VALUE_MAX][VALUE_MAX])(struct value *v, struct value *values) = {
-        [GROUP_COMMA][VALUE_NUMBER][VALUE_NUMBER] = number_comma_number,
-        [GROUP_COMMA][VALUE_NUMBER][VALUE_MATRIX] = number_comma_matrix,
-        [GROUP_COMMA][VALUE_MATRIX][VALUE_NUMBER] = matrix_comma_number,
+        [GROUP_COMMA][VALUE_BOOL][VALUE_NUMBER] = value_comma_value,
+        [GROUP_COMMA][VALUE_BOOL][VALUE_MATRIX] = value_comma_matrix,
+        [GROUP_COMMA][VALUE_MATRIX][VALUE_BOOL] = matrix_comma_value,
+        [GROUP_COMMA][VALUE_NUMBER][VALUE_NUMBER] = value_comma_value,
+        [GROUP_COMMA][VALUE_NUMBER][VALUE_MATRIX] = value_comma_matrix,
+        [GROUP_COMMA][VALUE_MATRIX][VALUE_NUMBER] = matrix_comma_value,
         [GROUP_COMMA][VALUE_MATRIX][VALUE_MATRIX] = matrix_comma_matrix,
 
+        [GROUP_SEMICOLON][VALUE_BOOL][VALUE_NUMBER] = value_semicolon_value,
+        [GROUP_SEMICOLON][VALUE_BOOL][VALUE_MATRIX] = value_semicolon_matrix,
+        [GROUP_SEMICOLON][VALUE_MATRIX][VALUE_BOOL] = matrix_semicolon_value,
+        [GROUP_SEMICOLON][VALUE_NUMBER][VALUE_NUMBER] = value_semicolon_value,
+        [GROUP_SEMICOLON][VALUE_NUMBER][VALUE_MATRIX] = value_semicolon_matrix,
+        [GROUP_SEMICOLON][VALUE_MATRIX][VALUE_NUMBER] = matrix_semicolon_value,
         [GROUP_SEMICOLON][VALUE_MATRIX][VALUE_MATRIX] = matrix_semicolon_matrix,
 
         [GROUP_PLUS][VALUE_NUMBER][VALUE_NUMBER] = number_plus_number,

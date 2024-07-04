@@ -200,7 +200,7 @@ int vector_dot_product(struct value *v, struct value *values)
     return 0;
 }
 
-int number_comma_number(struct value *v, struct value *values)
+int value_comma_value(struct value *v, struct value *values)
 {
     struct value *c;
 
@@ -219,7 +219,7 @@ int number_comma_number(struct value *v, struct value *values)
     return 0;
 }
 
-int number_comma_matrix(struct value *v, struct value *values)
+int value_comma_matrix(struct value *v, struct value *values)
 {
     struct matrix *const mat = &values[1].v.m;
     struct value *c;
@@ -245,7 +245,7 @@ int number_comma_matrix(struct value *v, struct value *values)
     return 0;
 }
 
-int matrix_comma_number(struct value *v, struct value *values)
+int matrix_comma_value(struct value *v, struct value *values)
 {
     struct matrix *const mat = &values[0].v.m;
     struct value *c;
@@ -299,6 +299,77 @@ int matrix_comma_matrix(struct value *v, struct value *values)
     v->t = VALUE_MATRIX;
     v->v.m.m = m;
     v->v.m.n = n;
+    v->v.m.v = c;
+    return 0;
+}
+
+int value_semicolon_value(struct value *v, struct value *values)
+{
+    struct value *c;
+
+    c = reallocarray(NULL, 2, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        copy_value(&c[i], &values[i]);
+    }
+    v->t = VALUE_MATRIX;
+    v->v.m.m = 2;
+    v->v.m.n = 1;
+    v->v.m.v = c;
+    return 0;
+}
+
+int value_semicolon_matrix(struct value *v, struct value *values)
+{
+    struct matrix *const mat = &values[1].v.m;
+    struct value *c;
+
+    if (mat->n != 1) {
+        throw_error("can not combine this matrix with a value");
+        return -1;
+    }
+    c = reallocarray(NULL, mat->m + 1, sizeof(*mat->v));
+    if (c == NULL) {
+        throw_error("%s", strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < mat->m; i++) {
+        copy_value(&c[i + 1], &mat->v[i]);
+    }
+    copy_value(&c[0], &values[0]);
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = mat->m + 1;
+    v->v.m.n = 1;
+    v->v.m.v = c;
+    return 0;
+}
+
+int matrix_semicolon_value(struct value *v, struct value *values)
+{
+    struct matrix *const mat = &values[0].v.m;
+    struct value *c;
+
+    if (mat->n != 1) {
+        throw_error("can not combine this matrix with a value");
+        return -1;
+    }
+    c = reallocarray(NULL, mat->m + 1, sizeof(*c));
+    if (c == NULL) {
+        throw_error(strerror(errno));
+        return -1;
+    }
+    for (size_t i = 0; i < mat->m; i++) {
+        copy_value(&c[i], &mat->v[i]);
+    }
+    copy_value(&c[mat->m], &values[1]);
+
+    v->t = VALUE_MATRIX;
+    v->v.m.m = mat->m + 1;
+    v->v.m.n = 1;
     v->v.m.v = c;
     return 0;
 }
