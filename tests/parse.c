@@ -24,7 +24,7 @@ int main(void)
             reset_parser();
             break;
         case PARSER_OK:
-            output_group(&Parser.root, 0);
+            output_group_debug(&Parser.root, 0);
             printf("\n");
             reset_parser();
             printf(">>> ");

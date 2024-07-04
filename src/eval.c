@@ -333,7 +333,9 @@ void output_value(struct value *v)
 
     case VALUE_VARIABLE:
         printf("%s", v->v.var->name);
-        if (v->v.var->ndep > 0) {
+        if (v->v.var->ndep == 1) {
+            printf(": %s", v->v.var->dep[0]);
+        } else {
             printf("(%s", v->v.var->dep[0]);
             for (size_t i = 1; i < v->v.var->ndep; i++) {
                 printf(", %s", v->v.var->dep[i]);

@@ -86,6 +86,8 @@ enum group_type {
     GROUP_MAX
 };
 
+extern const int Precedences[];
+
 struct group {
     /* type of this group */
     enum group_type t;
@@ -133,7 +135,8 @@ void free_group(struct group *group);
 /*
  * Output this group to stdout (use 0 for color)
  */
-void output_group(struct group *group, int color);
+void output_group_debug(const struct group *group, int color);
+void output_group(const struct group *group);
 
 #endif
 

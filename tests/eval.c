@@ -52,7 +52,7 @@ int main(void)
             break;
         case PARSER_OK:
             if (compute_value(&Parser.root, &v) == 0) {
-                output_group(&Parser.root, 0);
+                output_group(&Parser.root);
                 printf(" = ");
                 output_value(&v);
                 clear_value(&v);

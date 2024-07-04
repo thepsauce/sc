@@ -91,68 +91,6 @@ static size_t begins_with(const char *s)
     return n;
 }
 
-static const int Precedences[] = {
-    [GROUP_NULL] = 0,
-
-    [GROUP_ROUND] = 0,
-    [GROUP_DOUBLE_CORNER] = 0,
-    [GROUP_CORNER] = 0,
-    [GROUP_SQUARE] = 0,
-    [GROUP_CURLY] = 0,
-    [GROUP_DOUBLE_BAR] = 0,
-    [GROUP_BAR] = 0,
-
-    [GROUP_SEMICOLON] = 1,
-    [GROUP_COMMA] = 2,
-
-    [GROUP_IF] = 3,
-    [GROUP_DO] = 3,
-    [GROUP_WHERE] = 3,
-    [GROUP_ELSE] = 3,
-
-    [GROUP_NOT] = 4,
-
-    [GROUP_AND] = 4,
-    [GROUP_OR] = 4,
-    [GROUP_XOR] = 4,
-
-    [GROUP_LESS] = 5,
-    [GROUP_LESS_EQUAL] = 5,
-    [GROUP_GREATER] = 5,
-    [GROUP_GREATER_EQUAL] = 5,
-    [GROUP_EQUAL] = 5,
-    [GROUP_NOT_EQUAL] = 5,
-
-    [GROUP_POSITIVE] = 6,
-    [GROUP_NEGATE] = 6,
-
-    [GROUP_PLUS] = 6,
-    [GROUP_MINUS] = 6,
-
-    [GROUP_MULTIPLY] = 7,
-    [GROUP_DIVIDE] = 7,
-    [GROUP_MOD] = 7,
-
-    [GROUP_IMPLICIT] = 7,
-
-    [GROUP_ELEMENT_OF] = 8,
-
-    [GROUP_SQRT] = 9,
-    [GROUP_CBRT] = 9,
-
-    [GROUP_RAISE] = 9,
-    [GROUP_RAISE2] = 9,
-    [GROUP_RAISE3] = 9,
-
-    [GROUP_LOWER] = 10,
-
-    [GROUP_EXCLAM] = 11,
-    [GROUP_PERCENT] = 11,
-
-    [GROUP_VARIABLE] = INT_MAX,
-    [GROUP_NUMBER] = INT_MAX,
-};
-
 static void walk_up_precedences(int p)
 {
     while (Parser.cur->p != NULL) {

@@ -4,6 +4,68 @@
 #include <stdlib.h>
 #include <string.h>
 
+const int Precedences[] = {
+    [GROUP_NULL] = 0,
+
+    [GROUP_ROUND] = 0,
+    [GROUP_DOUBLE_CORNER] = 0,
+    [GROUP_CORNER] = 0,
+    [GROUP_SQUARE] = 0,
+    [GROUP_CURLY] = 0,
+    [GROUP_DOUBLE_BAR] = 0,
+    [GROUP_BAR] = 0,
+
+    [GROUP_SEMICOLON] = 1,
+    [GROUP_COMMA] = 2,
+
+    [GROUP_IF] = 3,
+    [GROUP_DO] = 3,
+    [GROUP_WHERE] = 3,
+    [GROUP_ELSE] = 3,
+
+    [GROUP_NOT] = 4,
+
+    [GROUP_AND] = 4,
+    [GROUP_OR] = 4,
+    [GROUP_XOR] = 4,
+
+    [GROUP_LESS] = 5,
+    [GROUP_LESS_EQUAL] = 5,
+    [GROUP_GREATER] = 5,
+    [GROUP_GREATER_EQUAL] = 5,
+    [GROUP_EQUAL] = 5,
+    [GROUP_NOT_EQUAL] = 5,
+
+    [GROUP_POSITIVE] = 6,
+    [GROUP_NEGATE] = 6,
+
+    [GROUP_PLUS] = 6,
+    [GROUP_MINUS] = 6,
+
+    [GROUP_MULTIPLY] = 7,
+    [GROUP_DIVIDE] = 7,
+    [GROUP_MOD] = 7,
+
+    [GROUP_IMPLICIT] = 7,
+
+    [GROUP_ELEMENT_OF] = 8,
+
+    [GROUP_SQRT] = 9,
+    [GROUP_CBRT] = 9,
+
+    [GROUP_RAISE] = 9,
+    [GROUP_RAISE2] = 9,
+    [GROUP_RAISE3] = 9,
+
+    [GROUP_LOWER] = 10,
+
+    [GROUP_EXCLAM] = 11,
+    [GROUP_PERCENT] = 11,
+
+    [GROUP_VARIABLE] = INT_MAX,
+    [GROUP_NUMBER] = INT_MAX,
+};
+
 struct group *new_group(size_t n)
 {
     struct group *g;
@@ -133,7 +195,55 @@ const char *GroupTypeStrings[] = {
     [GROUP_CBRT] = "CBRT",
 };
 
-void output_group(struct group *g, int color)
+const char *GroupTypeOperatorStrings[] = {
+    [GROUP_NULL] = ".",
+    [GROUP_POSITIVE] = "+.",
+    [GROUP_NEGATE] = "-.",
+    [GROUP_NOT] = "!.",
+    [GROUP_PLUS] = ". + .",
+    [GROUP_MINUS] = ". - .",
+    [GROUP_MULTIPLY] = ". * .",
+    [GROUP_DIVIDE] = ". / .",
+    [GROUP_MOD] = ". mod .",
+    [GROUP_RAISE] = ".^.",
+    [GROUP_LOWER] = "._.",
+    [GROUP_AND] = ". and .",
+    [GROUP_OR] = ". or .",
+    [GROUP_XOR] = ". xor .",
+    [GROUP_IF] = ". if .",
+    [GROUP_LESS] = ". < .",
+    [GROUP_LESS_EQUAL] = ". ≤ .",
+    [GROUP_GREATER] = ". > .",
+    [GROUP_GREATER_EQUAL] = ". ≥ .",
+    [GROUP_EQUAL] = ". = .",
+    [GROUP_NOT_EQUAL] = ". ≠ .",
+    [GROUP_COMMA] = "., .",
+    [GROUP_SEMICOLON] = ".; .",
+    [GROUP_DO] = ". do .",
+    [GROUP_WHERE] = ". where .",
+    [GROUP_EXCLAM] = ".!",
+    [GROUP_PERCENT] = ".%",
+    [GROUP_ELSE] = ". else",
+    [GROUP_ROUND] = "(.)",
+    [GROUP_DOUBLE_CORNER] = "<<.>>",
+    [GROUP_CORNER] = "<.>",
+    [GROUP_SQUARE] = "[.]",
+    [GROUP_CURLY] = "{.}",
+    [GROUP_DOUBLE_BAR] = "‖.‖",
+    [GROUP_BAR] = "|.|",
+    [GROUP_CEIL] = "⌈.⌉",
+    [GROUP_FLOOR] = "⌊.⌋",
+    [GROUP_IMPLICIT] = "..",
+    [GROUP_VARIABLE] = "",
+    [GROUP_NUMBER] = "",
+    [GROUP_ELEMENT_OF] = ". ∈ .",
+    [GROUP_RAISE2] = ".²",
+    [GROUP_RAISE3] = ".³",
+    [GROUP_SQRT] = "√.",
+    [GROUP_CBRT] = "∛.",
+};
+
+void output_group_debug(const struct group *g, int color)
 {
     if (color == 0) {
         color = 37;
@@ -160,9 +270,36 @@ void output_group(struct group *g, int color)
             if (i > 0) {
                 printf(", ");
             }
-            output_group(&g->g[i], color);
+            output_group_debug(&g->g[i], color);
         }
         printf("\x1b[1;%dm]", color);
     }
     printf("\x1b[m");
+}
+
+void output_group(const struct group *g)
+{
+    switch (g->t) {
+    case GROUP_NUMBER:
+        mpf_out_str(stdout, 10, 0, g->v.f);
+        return;
+    case GROUP_VARIABLE:
+        printf("%s", g->v.w);
+        return;
+    default:
+        break;
+    }
+    const char *s = GroupTypeOperatorStrings[g->t];
+    const char *d = strchr(s, '.');
+    for (size_t i = 0; i < g->n; i++) {
+        printf("%.*s", (int) (d - s), s);
+        output_group(&g->g[i]);
+        s = d + 1;
+        d = strchr(s, '.');
+        if (d == NULL && i + 1 != g->n) {
+            fprintf(stderr, "internal error of eternal weirdness\n");
+            exit(1);
+        }
+    }
+    printf("%s", s);
 }
