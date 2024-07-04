@@ -266,7 +266,7 @@ int compute_value(struct group *g, struct value *v)
                 clear_group(&var->value);
                 copy_group(&var->value, &g->g[1]);
             }
-            return 0;
+            return 1;
 
         case GROUP_IMPLICIT:
             switch (handle_implicit_declare(g)) {
