@@ -106,15 +106,16 @@ int copy_value(struct value *dest, const struct value *src)
     case VALUE_NUMBER:
         mpf_init_set(dest->v.f, src->v.f);
         break;
+
     case VALUE_MATRIX: {
-        const struct matrix *mat = &src->v.m;
+        const struct matrix *mat = &src->v.mat;
         const size_t n = mat->n * mat->m;
-        dest->v.m.v = reallocarray(NULL, n, sizeof(*mat->v));
+        dest->v.mat.v = reallocarray(NULL, n, sizeof(*mat->v));
         for (size_t i = 0; i < n; i++) {
-            copy_value(&dest->v.m.v[i], &mat->v[i]);
+            copy_value(&dest->v.mat.v[i], &mat->v[i]);
         }
-        dest->v.m.n = mat->n;
-        dest->v.m.m = mat->m;
+        dest->v.mat.n = mat->n;
+        dest->v.mat.m = mat->m;
         break;
     }
     case VALUE_RANGE:
@@ -136,10 +137,10 @@ void clear_value(struct value *v)
         mpf_clear(v->v.f);
         break;
     case VALUE_MATRIX:
-        for (size_t i = 0, n = v->v.m.m * v->v.m.n; i < n; i++) {
-            clear_value(&v->v.m.v[i]);
+        for (size_t i = 0, n = v->v.mat.m * v->v.mat.n; i < n; i++) {
+            clear_value(&v->v.mat.v[i]);
         }
-        free(v->v.m.v);
+        free(v->v.mat.v);
         break;
     case VALUE_SET:
         break;

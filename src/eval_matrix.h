@@ -1,8 +1,8 @@
 int matrix_plus_matrix(struct value *v, struct value *values)
 {
     struct matrix *m1, *m2, dest;
-    m1 = &values[0].v.m;
-    m2 = &values[1].v.m;
+    m1 = &values[0].v.mat;
+    m2 = &values[1].v.mat;
     if (m1->m != m2->m || m1->n != m2->n) {
         throw_error("adding matrices of incompatible size");
         return -1;
@@ -28,15 +28,15 @@ int matrix_plus_matrix(struct value *v, struct value *values)
         }
     }
     v->t = VALUE_MATRIX;
-    v->v.m = dest;
+    v->v.mat = dest;
     return 0;
 }
 
 int matrix_minus_matrix(struct value *v, struct value *values)
 {
     struct matrix *m1, *m2, dest;
-    m1 = &values[0].v.m;
-    m2 = &values[1].v.m;
+    m1 = &values[0].v.mat;
+    m2 = &values[1].v.mat;
     if (m1->m != m2->m || m1->n != m2->n) {
         throw_error("subtracting matrices of incompatible size");
         return -1;
@@ -62,7 +62,7 @@ int matrix_minus_matrix(struct value *v, struct value *values)
         }
     }
     v->t = VALUE_MATRIX;
-    v->v.m = dest;
+    v->v.mat = dest;
     return 0;
 }
 
@@ -70,7 +70,7 @@ int matrix_multiply_number(struct value *v, struct value *values)
 {
     struct matrix dest;
 
-    struct matrix *m = &values[0].v.m;
+    struct matrix *m = &values[0].v.mat;
 
     const size_t n = m->m * m->n;
 
@@ -93,7 +93,7 @@ int matrix_multiply_number(struct value *v, struct value *values)
     dest.n = m->n;
 
     v->t = VALUE_MATRIX;
-    v->v.m = dest;
+    v->v.mat = dest;
     return 0;
 }
 
@@ -109,8 +109,8 @@ int number_multiply_matrix(struct value *v, struct value *values)
 int matrix_multiply_matrix(struct value *v, struct value *values)
 {
     struct matrix *m1, *m2, dest;
-    m1 = &values[0].v.m;
-    m2 = &values[1].v.m;
+    m1 = &values[0].v.mat;
+    m2 = &values[1].v.mat;
     if (m1->m != m2->n) {
         throw_error("multiplying matrices of incompatible size");
         return -1;
@@ -152,7 +152,7 @@ int matrix_multiply_matrix(struct value *v, struct value *values)
         free(dest.v);
     } else {
         v->t = VALUE_MATRIX;
-        v->v.m = dest;
+        v->v.mat = dest;
     }
     return 0;
 }
@@ -162,8 +162,8 @@ int vector_dot_product(struct value *v, struct value *values)
     struct matrix *v1, *v2;
     size_t n1, n2;
 
-    v1 = &values[0].v.m;
-    v2 = &values[1].v.m;
+    v1 = &values[0].v.mat;
+    v2 = &values[1].v.mat;
     if ((v1->m != 1 && v1->n != 1) || (v2->m != 1 && v2->n != 1)) {
         throw_error("dot product only for matrices with a single row/column");
         return -1;
@@ -218,15 +218,15 @@ int value_comma_value(struct value *v, struct value *values)
         copy_value(&c[i], &values[i]);
     }
     v->t = VALUE_MATRIX;
-    v->v.m.m = 1;
-    v->v.m.n = 2;
-    v->v.m.v = c;
+    v->v.mat.m = 1;
+    v->v.mat.n = 2;
+    v->v.mat.v = c;
     return 0;
 }
 
 int value_comma_matrix(struct value *v, struct value *values)
 {
-    struct matrix *const mat = &values[1].v.m;
+    struct matrix *const mat = &values[1].v.mat;
     struct value *c;
 
     if (mat->m != 1) {
@@ -244,15 +244,15 @@ int value_comma_matrix(struct value *v, struct value *values)
     copy_value(&c[0], &values[0]);
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = 1;
-    v->v.m.n = mat->n + 1;
-    v->v.m.v = c;
+    v->v.mat.m = 1;
+    v->v.mat.n = mat->n + 1;
+    v->v.mat.v = c;
     return 0;
 }
 
 int matrix_comma_value(struct value *v, struct value *values)
 {
-    struct matrix *const mat = &values[0].v.m;
+    struct matrix *const mat = &values[0].v.mat;
     struct value *c;
 
     if (mat->m != 1) {
@@ -270,16 +270,16 @@ int matrix_comma_value(struct value *v, struct value *values)
     copy_value(&c[mat->n], &values[1]);
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = 1;
-    v->v.m.n = mat->n + 1;
-    v->v.m.v = c;
+    v->v.mat.m = 1;
+    v->v.mat.n = mat->n + 1;
+    v->v.mat.v = c;
     return 0;
 }
 
 int matrix_comma_matrix(struct value *v, struct value *values)
 {
-    struct matrix *const m1 = &values[0].v.m;
-    struct matrix *const m2 = &values[1].v.m;
+    struct matrix *const m1 = &values[0].v.mat;
+    struct matrix *const m2 = &values[1].v.mat;
     struct value *c;
     if (m1->m != m2->m) {
         throw_error("can not combine two matrices with different row count");
@@ -302,9 +302,9 @@ int matrix_comma_matrix(struct value *v, struct value *values)
     }
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = m;
-    v->v.m.n = n;
-    v->v.m.v = c;
+    v->v.mat.m = m;
+    v->v.mat.n = n;
+    v->v.mat.v = c;
     return 0;
 }
 
@@ -321,15 +321,15 @@ int value_semicolon_value(struct value *v, struct value *values)
         copy_value(&c[i], &values[i]);
     }
     v->t = VALUE_MATRIX;
-    v->v.m.m = 2;
-    v->v.m.n = 1;
-    v->v.m.v = c;
+    v->v.mat.m = 2;
+    v->v.mat.n = 1;
+    v->v.mat.v = c;
     return 0;
 }
 
 int value_semicolon_matrix(struct value *v, struct value *values)
 {
-    struct matrix *const mat = &values[1].v.m;
+    struct matrix *const mat = &values[1].v.mat;
     struct value *c;
 
     if (mat->n != 1) {
@@ -347,15 +347,15 @@ int value_semicolon_matrix(struct value *v, struct value *values)
     copy_value(&c[0], &values[0]);
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = mat->m + 1;
-    v->v.m.n = 1;
-    v->v.m.v = c;
+    v->v.mat.m = mat->m + 1;
+    v->v.mat.n = 1;
+    v->v.mat.v = c;
     return 0;
 }
 
 int matrix_semicolon_value(struct value *v, struct value *values)
 {
-    struct matrix *const mat = &values[0].v.m;
+    struct matrix *const mat = &values[0].v.mat;
     struct value *c;
 
     if (mat->n != 1) {
@@ -373,16 +373,16 @@ int matrix_semicolon_value(struct value *v, struct value *values)
     copy_value(&c[mat->m], &values[1]);
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = mat->m + 1;
-    v->v.m.n = 1;
-    v->v.m.v = c;
+    v->v.mat.m = mat->m + 1;
+    v->v.mat.n = 1;
+    v->v.mat.v = c;
     return 0;
 }
 
 int matrix_semicolon_matrix(struct value *v, struct value *values)
 {
-    struct matrix *const m1 = &values[0].v.m;
-    struct matrix *const m2 = &values[1].v.m;
+    struct matrix *const m1 = &values[0].v.mat;
+    struct matrix *const m2 = &values[1].v.mat;
     struct value *c;
     if (m1->n != m2->n) {
         throw_error("can not combine two matrices with different column count");
@@ -405,8 +405,8 @@ int matrix_semicolon_matrix(struct value *v, struct value *values)
     }
 
     v->t = VALUE_MATRIX;
-    v->v.m.m = m;
-    v->v.m.n = n;
-    v->v.m.v = c;
+    v->v.mat.m = m;
+    v->v.mat.n = n;
+    v->v.mat.v = c;
     return 0;
 }
