@@ -147,8 +147,13 @@ int matrix_multiply_matrix(struct value *v, struct value *values)
             dest.v[i * dest.n + j] = sum;
         }
     }
-    v->t = VALUE_MATRIX;
-    v->v.m = dest;
+    if (dest.m == 1 && dest.n == 1) {
+        *v = *dest.v;
+        free(dest.v);
+    } else {
+        v->t = VALUE_MATRIX;
+        v->v.m = dest;
+    }
     return 0;
 }
 
