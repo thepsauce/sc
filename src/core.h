@@ -15,6 +15,7 @@
 enum value_type {
     VALUE_NULL,
     VALUE_BOOL,
+    VALUE_VARIABLE,
     VALUE_NUMBER,
     /* VALUE_VECTOR, (matrix of size 1 x n) */
     VALUE_MATRIX,
@@ -34,17 +35,6 @@ struct matrix {
     size_t m, n;
 };
 
-struct value {
-    enum value_type t;
-    union {
-        mpf_t f;
-        bool b;
-        struct matrix /* vector */ v;
-        struct matrix m;
-        struct matrix /* set */ s;
-    } v;
-};
-
 struct variable {
     char *name;
     struct group value;
@@ -53,12 +43,22 @@ struct variable {
     size_t ndep;
 };
 
+struct value {
+    enum value_type t;
+    union {
+        mpf_t f;
+        bool b;
+        struct matrix /* vector */ vec;
+        struct matrix mat;
+        struct matrix /* set */ set;
+        struct variable *var;
+    } v;
+};
+
 /* * * Core * * */
 
 extern struct core {
-    /* all variables (this needs to be a double pointer,
-     * so the address of value does not change (messes up the children))
-     */
+    /* all variables */
     struct variable **v;
     size_t nv;
 } Core;
@@ -100,7 +100,8 @@ struct variable *get_variable(const char *name, size_t ndep);
  * Note: This does not check if the variable exists already. The name must
  * be contained in the dictionary.
  */
-int add_variable(char *name, const struct group *val, char *const *dep, size_t ndep);
+struct variable *add_variable(char *name, const struct group *val,
+        char *const *dep, size_t ndep);
 
 /*
  * Print the error to stderr.

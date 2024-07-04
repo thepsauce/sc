@@ -27,7 +27,8 @@ struct variable *get_variable(const char *name, size_t ndep)
     return NULL;
 }
 
-int add_variable(char *name, const struct group *val, char *const *dep, size_t ndep)
+struct variable *add_variable(char *name, const struct group *val,
+        char *const *dep, size_t ndep)
 {
     struct variable **v, *var;
 
@@ -45,20 +46,20 @@ int add_variable(char *name, const struct group *val, char *const *dep, size_t n
     if (var->dep == NULL) {
         goto err;
     }
-    for (size_t i = 0; i < ndep; i++) {
-        var->dep[i] = dep[i];
-    }
     if (copy_group(&var->value, val) == -1) {
         free(var->dep);
         free(var);
         goto err;
     }
     var->name = name;
+    for (size_t i = 0; i < ndep; i++) {
+        var->dep[i] = dep[i];
+    }
     var->ndep = ndep;
     Core.nv++;
-    return 0;
+    return var;
 
 err:
     throw_error("%s", strerror(errno));
-    return -1;
+    return NULL;
 }

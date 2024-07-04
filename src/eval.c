@@ -118,6 +118,10 @@ int copy_value(struct value *dest, const struct value *src)
         dest->v.mat.m = mat->m;
         break;
     }
+
+    case VALUE_VARIABLE:
+        dest->v.var = src->v.var;
+        break;
     case VALUE_RANGE:
         /* TODO: */
         break;
@@ -173,7 +177,8 @@ static int compute_deep_value(struct group *g, struct value *v)
         if (g->g[0].t == GROUP_VARIABLE) {
             /* TODO: */
         }
-        return 0;
+        throw_error("implicit operations not implemented yet");
+        return -1;
 
     default:
         break;
@@ -195,7 +200,7 @@ static int compute_deep_value(struct group *g, struct value *v)
     return err;
 }
 
-static inline int handle_implicit_declare(struct group *equ)
+static inline int handle_implicit_declare(struct group *equ, struct value *v)
 {
     char **d, **dep = NULL;
     size_t ndep = 0;
@@ -210,7 +215,7 @@ static inline int handle_implicit_declare(struct group *equ)
     switch (impl->t) {
     case GROUP_VARIABLE:
         /* function depending on a single variable */
-        add_variable(var->v.w, &equ->g[1], &impl->v.w, 1);
+        v->v.var = add_variable(var->v.w, &equ->g[1], &impl->v.w, 1);
         break;
 
     case GROUP_ROUND:
@@ -242,7 +247,7 @@ static inline int handle_implicit_declare(struct group *equ)
         }
         dep = d;
         dep[ndep++] = c->v.w;
-        add_variable(var->v.w, &equ->g[1], dep, ndep);
+        v->v.var = add_variable(var->v.w, &equ->g[1], dep, ndep);
         free(dep);
         break;
 
@@ -258,19 +263,21 @@ int compute_value(struct group *g, struct value *v)
 
     switch (g->t) {
     case GROUP_EQUAL:
+        v->t = VALUE_VARIABLE;
         switch (g->g[0].t) {
         case GROUP_VARIABLE:
             var = get_variable(g->g[0].v.w, 0);
             if (var == NULL) {
-                add_variable(g->g[0].v.w, &g->g[1], NULL, 0);
+                v->v.var = add_variable(g->g[0].v.w, &g->g[1], NULL, 0);
             } else {
                 clear_group(&var->value);
                 copy_group(&var->value, &g->g[1]);
+                v->v.var = var;
             }
-            return 1;
+            return 0;
 
         case GROUP_IMPLICIT:
-            switch (handle_implicit_declare(g)) {
+            switch (handle_implicit_declare(g, v)) {
             case -1:
                 return -1;
             case 0:
@@ -306,22 +313,32 @@ void output_value(struct value *v)
         break;
 
     case VALUE_MATRIX:
-        if (v->v.m.m == 1) {
+        if (v->v.mat.m == 1) {
             printf("( ");
-            for (size_t i = 0; i < v->v.m.n; i++) {
-                output_value(&v->v.m.v[i]);
+            for (size_t i = 0; i < v->v.mat.n; i++) {
+                output_value(&v->v.mat.v[i]);
                 printf(" ");
             }
             printf(")");
         } else {
-            printf("\n");
-            for (size_t i = 0; i < v->v.m.m; i++) {
-                for (size_t j = 0; j < v->v.m.n; j++) {
-                    output_value(&v->v.m.v[i * v->v.m.n + j]);
+            for (size_t i = 0; i < v->v.mat.m; i++) {
+                printf("\n");
+                for (size_t j = 0; j < v->v.mat.n; j++) {
+                    output_value(&v->v.mat.v[i * v->v.mat.n + j]);
                     printf(" ");
                 }
-                printf("\n");
             }
+        }
+        break;
+
+    case VALUE_VARIABLE:
+        printf("%s", v->v.var->name);
+        if (v->v.var->ndep > 0) {
+            printf("(%s", v->v.var->dep[0]);
+            for (size_t i = 1; i < v->v.var->ndep; i++) {
+                printf(", %s", v->v.var->dep[i]);
+            }
+            printf(")");
         }
         break;
 
